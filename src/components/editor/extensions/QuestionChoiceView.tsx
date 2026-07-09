@@ -12,6 +12,7 @@ import {
   requestFeedbackFollowup,
   requestQuestionFeedback,
 } from "./questionFeedbackApi";
+import { evaluateChoiceAnswer } from "./questionEvaluation";
 
 import {
   Minus,
@@ -434,41 +435,14 @@ function ViewerView({ attrs }: ViewerViewProps) {
 
     setIsFeedbackLoading(true);
     try {
-      const matchedCount = choices.filter(
-        (choice, idx) => choice.correct === selectedIndices.includes(idx),
-      ).length;
-      const accuracyPercent =
-        choices.length > 0
-          ? Math.round((matchedCount / choices.length) * 100)
-          : 0;
-      const evaluationLevel =
-        accuracyPercent === 100
-          ? "correct"
-          : accuracyPercent >= 60
-            ? "almost"
-            : "incorrect";
-      const missedCorrect = choices
-        .map((choice, idx) => ({ choice, idx }))
-        .filter(
-          ({ choice, idx }) => choice.correct && !selectedIndices.includes(idx),
-        )
-        .map(({ choice }) => choice.text.trim())
-        .filter(Boolean)
-        .join(" | ");
-      const wrongSelected = selectedIndices
-        .filter((idx) => !choices[idx]?.correct)
-        .map((idx) => choices[idx]?.text?.trim() ?? "")
-        .filter(Boolean)
-        .join(" | ");
-      const correctAnswer = choices
-        .filter((choice) => choice.correct)
-        .map((choice) => choice.text.trim())
-        .filter(Boolean)
-        .join(" | ");
-      const userAnswer = selectedIndices
-        .map((idx) => choices[idx]?.text?.trim() ?? "")
-        .filter(Boolean)
-        .join(" | ");
+      const {
+        accuracyPercent,
+        evaluationLevel,
+        missedCorrect,
+        wrongSelected,
+        correctAnswer,
+        userAnswer,
+      } = evaluateChoiceAnswer(choices, selectedIndices);
 
       const feedback = await requestQuestionFeedback({
         question: question || "Choice question",

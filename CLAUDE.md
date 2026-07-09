@@ -22,9 +22,19 @@ npm run dev        # vite dev server → http://localhost:5173
 npm run build      # vite build → dist/
 npm run preview    # preview the production build
 npm run lint       # eslint
+npm test           # vitest run
 ```
 
-No tests yet.
+**Tests:** Vitest + happy-dom. Config in `client/vitest.config.ts` (re-declares the `@` alias). Tests live next to the code they cover:
+
+```
+client/src/components/editor/extensions/__tests__/
+├── questionEvaluation.test.ts   # choice accuracy math
+├── questionAgentContext.test.ts # chat-history serializer
+└── questionFeedbackApi.test.ts  # axios bridge + fallback behavior
+```
+
+**Working agreement:** every later phase ships tests for its own acceptance criteria; you're not done until `npm test` is green.
 
 ## Conventions
 
@@ -150,7 +160,9 @@ Each `*Node.ts` defines the TipTap node (schema/attrs); each `*View.tsx` is its 
 - `requestWriteEvaluation(...)` → `POST /chat/write-evaluate` (open-ended answers).
 - `requestFeedbackFollowup(...)` → builds a follow-up coaching turn on top of `/chat/feedback` (used by `FeedbackDiscussionPanel.tsx` for the back-and-forth thread).
 
-Each call has a **Thai fallback string** if the request fails — keep that graceful-degradation behavior. Feedback verbosity is controlled by `feedbackMode` (`quick_check` | `full_reflection`, see `questionMode.ts`). The `QuestionAgentNode` free-Q&A uses `/chat/ask` with the lesson as `context` (see `questionAgentContext.ts`).
+Each call has a **Thai fallback string** if the request fails. Feedback verbosity is controlled by `feedbackMode` (`quick_check` | `full_reflection`, see `questionMode.ts`). The `QuestionAgentNode` free-Q&A uses `/chat/ask` with the lesson as `context` (see `questionAgentContext.ts`).
+
+> **⚠️ This whole bridge is being reworked** (roadmap Phases 0 → 5). Two changes land here: **Phase 0.4** replaces the silent Thai fallback strings with an honest `AiUnavailableError` + retry UI (a fallback that *looks like real feedback* is worse than an obvious "try again"). **Phase 5** points all four flows at a single new `POST /api/chat/tutor` endpoint and deletes the `requestFeedbackFollowup` hack (which today fakes a conversation by re-calling `/chat/feedback`). Read [`../ROADMAP-detailed.md`](../ROADMAP-detailed.md) before changing anything in `questionFeedbackApi.ts` or the `Question*View.tsx` files.
 
 ### Editor UI shell
 
