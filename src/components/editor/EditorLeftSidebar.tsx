@@ -90,7 +90,7 @@ const CATEGORIES: {
   { key: "text", icon: Type, label: "Text" },
   { key: "media", icon: Images, label: "Media" },
   { key: "formular", icon: Sigma, label: "Formula" },
-  { key: "special", icon: LayoutDashboard, label: "Special" },
+  { key: "special", icon: LayoutDashboard, label: "Question" },
 ];
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
@@ -1110,7 +1110,7 @@ const EditorLeftSidebar = ({
                   ? t("Media", "สื่อ")
                   : key === "formular"
                     ? t("Formula", "สูตร")
-                    : t("Special", "พิเศษ")
+                    : t("Question", "คำถาม")
             }
             isActive={activeCategory === key}
             onClick={() => onCategoryChange(key)}
@@ -1127,7 +1127,7 @@ const EditorLeftSidebar = ({
               ? t("Media", "สื่อ")
               : activeCategory === "formular"
                 ? t("Formula", "สูตร")
-                : t("Special", "พิเศษ")}
+                : t("Question", "คำถาม")}
         </p>
         {renderPanel()}
       </div>
