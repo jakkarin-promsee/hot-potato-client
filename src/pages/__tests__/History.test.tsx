@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createRoot, type Root } from "react-dom/client";
 import { act } from "react";
 import { MemoryRouter } from "react-router-dom";
@@ -10,7 +10,7 @@ let language: "en" | "th" = "en";
 const sampleEntries = [
   {
     _id: "hist-1",
-    last_accessed: new Date(Date.now() - 7 * 60 * 1000).toISOString(),
+    last_accessed: new Date("2026-07-10T11:53:00").toISOString(),
     content: {
       _id: "lesson-1",
       title: "Motion and Force",
@@ -49,7 +49,12 @@ function render(ui: React.ReactElement) {
   return container!;
 }
 
+beforeEach(() => {
+  vi.setSystemTime(new Date("2026-07-10T12:00:00"));
+});
+
 afterEach(() => {
+  vi.useRealTimers();
   language = "en";
   container?.remove();
   container = null;

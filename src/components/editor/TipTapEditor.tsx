@@ -1,4 +1,5 @@
 import { useEditor, EditorContent } from "@tiptap/react";
+import "@/indexTiptap.css";
 
 import EditorHeader from "./EditorHeader";
 import { useCallback, useEffect, useRef, useState } from "react";

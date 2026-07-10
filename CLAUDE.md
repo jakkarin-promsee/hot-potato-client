@@ -9,7 +9,7 @@ The web app for Hot Potato: where teachers author lessons and students learn. Re
 - **State:** Zustand (global stores) + TanStack Query (server state for some flows).
 - **Routing:** React Router 7.
 - **HTTP:** axios (single configured instance).
-- **Editor:** TipTap 3 (rich text) + Fabric.js 7 (canvas) + KaTeX (math) + lowlight (code).
+- **Editor:** TipTap 3 (rich text) + Fabric.js 7 (canvas) + KaTeX (math).
 - **Media:** Cloudinary (image upload/library).
 - **Icons/UI:** lucide-react, sonner (toasts).
 - **Deploy:** Vercel (SPA rewrite in `vercel.json`).
@@ -41,7 +41,8 @@ client/src/components/__tests__/                   # guards, TopNav
 
 - **Path alias `@` → `src/`** (configured in `vite.config.js` and `tsconfig.json`). Import as `@/components/...`, `@/stores/...`, `@/lib/...`.
 - **shadcn/ui** components live in `src/components/ui/` (config in `components.json`). Add new ones with the shadcn CLI; don't hand-edit generated primitives unless necessary. Compose with the `cn()` helper from `@/lib/utils`.
-- **Tailwind v4** — configuration is CSS-first (see `src/index.css`); there is no `tailwind.config.js`. Editor-specific styles live in `src/indexTiptap.css`.
+- **Tailwind v4** — configuration is CSS-first (see `src/index.css`); there is no `tailwind.config.js`. Editor-specific styles live in `src/indexTiptap.css` (imported from editor/viewer components, not `main.tsx`).
+- **Fonts (Tier 2.B):** fully self-hosted via `@fontsource` in `index.css` — **Geist Variable** = UI sans (`--font-sans`), **Lora** = serif headings (`font-serif`), **JetBrains Mono** = mono (`font-mono`, Status page), **Inter** = Fabric canvas text only (family name `"Inter"` is baked into saved lesson JSON — never rename). No CDN fonts (`fonts.googleapis.com` / `gstatic`); enforced by `src/__tests__/no-cdn-fonts.test.ts`. DM Sans was removed (loaded but unused). Thai text still falls back to system fonts.
 - File naming: pages `PascalCase.tsx`, stores `*.store.ts`, hooks `useX.ts`, libs `camelCase.ts`.
 - The app currently mixes English and Thai in UI strings; AI responses are Thai by default. Keep user-facing copy consistent with nearby code.
 
@@ -70,6 +71,8 @@ client/src/
 ## Routing & page map
 
 Defined in `App.tsx` with three guard components. `BrowserRouter` + `QueryClientProvider` wrap everything. On mount, if a persisted token exists, `recheckToken()` re-validates it.
+
+**Code splitting (Tier 2.A):** all pages except `Landing` and `NotFound` are `React.lazy` imports inside a single `<Suspense fallback={<PageLoader />}>`. Heavy vendor libs are pinned in `vite.config.js` `manualChunks` (`tiptap`, `fabric`, `katex`) so they load only on editor/viewer routes and cache across deploys. `main.tsx` listens for `vite:preloadError` and reloads once after a redeploy (stale chunk hashes). Editor-only CSS (`indexTiptap.css`) is imported from `TipTapEditor.tsx` / `TiptapViewer.tsx`, not `main.tsx`.
 
 | Path | Page | Guard | Notes |
 | --- | --- | --- | --- |

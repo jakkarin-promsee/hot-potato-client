@@ -16,4 +16,20 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+
+  build: {
+    rollupOptions: {
+      output: {
+        // Pin the three huge editor vendors to stable named chunks so browser
+        // caching survives app-code redeploys. They are only imported by lazy
+        // routes, so they stay lazy. Do NOT add react/react-dom/router here.
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+          if (/[\\/]node_modules[\\/]fabric[\\/]/.test(id)) return "fabric";
+          if (/[\\/]node_modules[\\/]katex[\\/]/.test(id)) return "katex";
+          if (/[\\/]node_modules[\\/](@tiptap|prosemirror-|tiptap-markdown)/.test(id)) return "tiptap";
+        },
+      },
+    },
+  },
 })

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import "@/indexTiptap.css";
 import { useNavigate } from "react-router-dom";
 import { createEditorExtensions } from "./config/editorExtensions";
 import { EditorContent, useEditor } from "@tiptap/react";
