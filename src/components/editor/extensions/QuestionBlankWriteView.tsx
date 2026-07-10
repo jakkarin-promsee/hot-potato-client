@@ -2,15 +2,16 @@ import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { NodeViewWrapper, NodeViewProps } from "@tiptap/react";
 import { NodeSelection } from "@tiptap/pm/state";
 import { useAnswerStore } from "@/stores/content-answer.store";
+import { useCanvasStore } from "@/stores/canvas.store";
 import FeedbackDiscussionPanel, {
   type FeedbackThreadMessage,
 } from "./FeedbackDiscussionPanel";
 import QuestionFeedbackModeToggle from "./QuestionFeedbackModeToggle";
 import {
   AiUnavailableError,
-  requestFeedbackFollowup,
-  requestQuestionFeedback,
-} from "./questionFeedbackApi";
+  callTutor,
+  feedbackThreadToClientThread,
+} from "./tutorApi";
 import AiErrorRetry from "./AiErrorRetry";
 import type { QuestionFeedbackMode } from "./questionMode";
 import { Eye, EyeOff, HelpCircle, SquareDashedMousePointer } from "lucide-react";
@@ -24,6 +25,7 @@ interface BlockAnswer {
   aiFeedback?: string;
   feedbackThread?: FeedbackThreadMessage[];
   threadOpen?: boolean;
+  suggestions?: string[];
 }
 
 interface InlineBlankTextareaProps {
@@ -316,6 +318,7 @@ function ViewerView({ attrs }: { attrs: QuestionBlankWriteAttrs }) {
   const { id: blockId, template, blankAnswers, feedbackMode } = attrs;
   const answers = useAnswerStore((s) => s.answers);
   const setAnswer = useAnswerStore((s) => s.setAnswer);
+  const contentId = useCanvasStore((s) => s.contentId);
 
   const blankIndices = useMemo(() => getBlankIndices(template), [template]);
   const pieces = useMemo(() => renderTemplatePieces(template), [template]);
@@ -335,6 +338,9 @@ function ViewerView({ attrs }: { attrs: QuestionBlankWriteAttrs }) {
     saved?.feedbackThread ?? [],
   );
   const [threadOpen, setThreadOpen] = useState(saved?.threadOpen ?? false);
+  const [suggestions, setSuggestions] = useState<string[]>(
+    saved?.suggestions ?? [],
+  );
   const [isThreadLoading, setIsThreadLoading] = useState(false);
   const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
   const [aiError, setAiError] = useState(false);
@@ -349,10 +355,20 @@ function ViewerView({ attrs }: { attrs: QuestionBlankWriteAttrs }) {
         aiFeedback,
         feedbackThread,
         threadOpen,
+        suggestions,
         ...next,
       });
     },
-    [aiFeedback, blockId, feedbackThread, inputs, setAnswer, submitted, threadOpen],
+    [
+      aiFeedback,
+      blockId,
+      feedbackThread,
+      inputs,
+      setAnswer,
+      submitted,
+      suggestions,
+      threadOpen,
+    ],
   );
 
   useEffect(() => {
@@ -362,6 +378,7 @@ function ViewerView({ attrs }: { attrs: QuestionBlankWriteAttrs }) {
     setAiFeedback(saved?.aiFeedback ?? "");
     setFeedbackThread(saved?.feedbackThread ?? []);
     setThreadOpen(saved?.threadOpen ?? false);
+    setSuggestions(saved?.suggestions ?? []);
   }, [answers[blockId], blankAnswers]);
 
   const hasInput = inputs.some((v) => v.trim().length > 0);
@@ -372,12 +389,14 @@ function ViewerView({ attrs }: { attrs: QuestionBlankWriteAttrs }) {
     setInputs(next);
     setFeedbackThread([]);
     setThreadOpen(false);
+    setSuggestions([]);
     persistAnswer({
       inputs: next,
       submitted: false,
       aiFeedback: "",
       feedbackThread: [],
       threadOpen: false,
+      suggestions: [],
     });
   };
 
@@ -387,12 +406,14 @@ function ViewerView({ attrs }: { attrs: QuestionBlankWriteAttrs }) {
     setAiError(false);
     setFeedbackThread([]);
     setThreadOpen(false);
+    setSuggestions([]);
     persistAnswer({
       inputs,
       submitted: true,
       aiFeedback: "",
       feedbackThread: [],
       threadOpen: false,
+      suggestions: [],
     });
 
     setIsFeedbackLoading(true);
@@ -403,24 +424,38 @@ function ViewerView({ attrs }: { attrs: QuestionBlankWriteAttrs }) {
             `[Q-${blankIndices[idx] ?? idx}] = ${value.trim() || "(empty)"}`,
         )
         .join(" | ");
+      const guideAnswer = blankAnswers
+        .map(
+          (value, idx) =>
+            `[Q-${blankIndices[idx] ?? idx}] = ${value.trim() || "(open)"}`,
+        )
+        .join(" | ");
 
-      const feedback = await requestQuestionFeedback({
-        question: template || "Fill blank write question",
-        correctAnswer: "",
-        userAnswer,
-        evaluationLevel: "almost",
-        accuracyPercent: 0,
-        diagnostics:
-          "Open-ended blank writing response; avoid exact correctness judgement.",
-        feedbackMode,
+      const { reply, suggestions: nextSuggestions } = await callTutor({
+        contentId: contentId ?? "",
+        blockId,
+        mode: "question_feedback",
+        message: userAnswer || "(ไม่ได้ตอบ)",
+        questionContext: {
+          question: template || "Fill blank write question",
+          guideAnswer,
+          evaluation: {
+            level: "ai_judge",
+            diagnostics:
+              "Typed fill-in answers; wording may differ from the guide — judge meaning kindly, not exact match.",
+          },
+          feedbackMode,
+        },
       });
-      setAiFeedback(feedback);
+      setAiFeedback(reply);
+      setSuggestions(nextSuggestions);
       persistAnswer({
         inputs,
         submitted: true,
-        aiFeedback: feedback,
+        aiFeedback: reply,
         feedbackThread: [],
         threadOpen: false,
+        suggestions: nextSuggestions,
       });
     } catch (error) {
       if (error instanceof AiUnavailableError) {
@@ -438,12 +473,14 @@ function ViewerView({ attrs }: { attrs: QuestionBlankWriteAttrs }) {
     setAiFeedback("");
     setFeedbackThread([]);
     setThreadOpen(false);
+    setSuggestions([]);
     persistAnswer({
       inputs: empty,
       submitted: false,
       aiFeedback: "",
       feedbackThread: [],
       threadOpen: false,
+      suggestions: [],
     });
   };
 
@@ -464,38 +501,36 @@ function ViewerView({ attrs }: { attrs: QuestionBlankWriteAttrs }) {
           (value, idx) => `[Q-${blankIndices[idx] ?? idx}] = ${value.trim() || "(empty)"}`,
         )
         .join(" | ");
-      const expectedAnswer = blankAnswers
-        .map(
-          (value, idx) =>
-            `[Q-${blankIndices[idx] ?? idx}] = ${value.trim() || "(open)"} `,
-        )
-        .join(" | ");
 
       setIsThreadLoading(true);
       setThreadAiError(false);
       try {
-        const aiReply = await requestFeedbackFollowup({
-          topic: template || "Fill blank write question",
-          studentAnswer: userAnswer,
-          initialFeedback: aiFeedback,
-          followupQuestion: message,
-          expectedAnswer,
-          feedbackMode,
-          thread: threadWithStudent.map((entry) => ({
-            role: entry.role,
-            text: entry.text,
-          })),
+        const { reply, suggestions: nextSuggestions } = await callTutor({
+          contentId: contentId ?? "",
+          blockId,
+          mode: "followup",
+          message,
+          clientThread: feedbackThreadToClientThread({
+            originalAnswer: userAnswer,
+            initialFeedback: aiFeedback,
+            thread: feedbackThread,
+          }),
         });
         const aiMessage: FeedbackThreadMessage = {
           role: "ai",
-          text: aiReply,
+          text: reply,
           createdAt: new Date().toISOString(),
         };
         const nextThread = [...threadWithStudent, aiMessage];
         setFeedbackThread(nextThread);
+        setSuggestions(nextSuggestions);
         setThreadAiError(false);
         setThreadRetryMessage("");
-        persistAnswer({ feedbackThread: nextThread, threadOpen: true });
+        persistAnswer({
+          feedbackThread: nextThread,
+          threadOpen: true,
+          suggestions: nextSuggestions,
+        });
       } catch (error) {
         if (error instanceof AiUnavailableError) {
           setThreadAiError(true);
@@ -509,13 +544,12 @@ function ViewerView({ attrs }: { attrs: QuestionBlankWriteAttrs }) {
     },
     [
       aiFeedback,
-      blankAnswers,
       blankIndices,
-      feedbackMode,
+      blockId,
+      contentId,
       feedbackThread,
       inputs,
       persistAnswer,
-      template,
     ],
   );
 

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { NodeViewWrapper, NodeViewProps } from "@tiptap/react";
 import { NodeSelection } from "@tiptap/pm/state";
 import { useAnswerStore } from "@/stores/content-answer.store";
-import api from "@/lib/axios";
+import { useCanvasStore } from "@/stores/canvas.store";
 import {
   Bot,
   SendHorizontal,
@@ -13,9 +13,10 @@ import {
 } from "lucide-react";
 import type { QuestionAgentAttrs } from "./QuestionAgentNode";
 import {
-  buildQuestionAgentUserContext,
-  getQuestionAgentContextAbove,
-} from "./questionAgentContext";
+  AiUnavailableError,
+  callTutor,
+  qaHistoryToClientThread,
+} from "./tutorApi";
 import AiErrorRetry from "./AiErrorRetry";
 import BlockMoveControls from "./BlockMoveControls";
 import { useEditorI18n } from "../editor.i18n";
@@ -29,6 +30,7 @@ export interface ChatMessage {
 interface BlockAnswer {
   chatHistory: ChatMessage[];
   collapsed: boolean;
+  suggestions?: string[];
 }
 
 function useAutoGrow(value: string) {
@@ -50,34 +52,6 @@ function useAutoGrow(value: string) {
   return ref;
 }
 
-class AiUnavailableError extends Error {
-  constructor() {
-    super("AI unavailable");
-    this.name = "AiUnavailableError";
-  }
-}
-
-async function askAi(
-  question: string,
-  context: string,
-  userContext: string,
-): Promise<string> {
-  try {
-    const response = await api.post<{ answer?: string }>("/chat/ask", {
-      prompt: question,
-      context,
-      userContext,
-    });
-
-    const answer = response.data?.answer?.trim();
-    if (!answer) throw new AiUnavailableError();
-    return answer;
-  } catch (error) {
-    if (error instanceof AiUnavailableError) throw error;
-    throw new AiUnavailableError();
-  }
-}
-
 export default function QuestionAgentView({
   node,
   selected,
@@ -92,6 +66,7 @@ export default function QuestionAgentView({
 
   const answers = useAnswerStore((s) => s.answers);
   const setAnswer = useAnswerStore((s) => s.setAnswer);
+  const contentId = useCanvasStore((s) => s.contentId);
   const savedAnswer = answers[blockId] as BlockAnswer | undefined;
 
   const [title, setTitle] = useState(attrs.title ?? t("Ask AI", "ถาม AI"));
@@ -100,6 +75,9 @@ export default function QuestionAgentView({
   );
   const [collapsed, setCollapsed] = useState<boolean>(
     savedAnswer?.collapsed ?? attrs.collapsed ?? true,
+  );
+  const [suggestions, setSuggestions] = useState<string[]>(
+    savedAnswer?.suggestions ?? [],
   );
   const [questionInput, setQuestionInput] = useState("");
   const [isAsking, setIsAsking] = useState(false);
@@ -112,6 +90,7 @@ export default function QuestionAgentView({
     if (!savedAnswer) return;
     setChatHistory(savedAnswer.chatHistory ?? []);
     setCollapsed(savedAnswer.collapsed ?? true);
+    setSuggestions(savedAnswer.suggestions ?? []);
   }, [answers[blockId]]);
 
   const latestMessage = useMemo(
@@ -141,22 +120,27 @@ export default function QuestionAgentView({
     setIsAsking(true);
     setAiError(false);
     try {
-      const context = getQuestionAgentContextAbove(editor, getPos);
-      const userContext = buildQuestionAgentUserContext(
-        answers,
+      const { reply, suggestions: nextSuggestions } = await callTutor({
+        contentId: contentId ?? "",
         blockId,
-        chatHistory,
-      );
-      const answer = await askAi(question, context, userContext);
+        mode: "free_chat",
+        message: question,
+        clientThread: qaHistoryToClientThread(chatHistory),
+      });
       const nextHistory = [
         ...chatHistory,
-        { question, answer, createdAt: new Date().toISOString() },
+        { question, answer: reply, createdAt: new Date().toISOString() },
       ];
       setChatHistory(nextHistory);
+      setSuggestions(nextSuggestions);
       setQuestionInput("");
       // Enter special mode automatically after first question.
       setCollapsed(false);
-      setAnswer(blockId, { chatHistory: nextHistory, collapsed: false });
+      setAnswer(blockId, {
+        chatHistory: nextHistory,
+        collapsed: false,
+        suggestions: nextSuggestions,
+      });
     } catch (error) {
       if (error instanceof AiUnavailableError) {
         setAiError(true);
@@ -169,13 +153,14 @@ export default function QuestionAgentView({
   const toggleCollapsed = () => {
     const next = !collapsed;
     setCollapsed(next);
-    setAnswer(blockId, { chatHistory, collapsed: next });
+    setAnswer(blockId, { chatHistory, collapsed: next, suggestions });
   };
 
   const clearHistory = () => {
     setChatHistory([]);
     setCollapsed(true);
-    setAnswer(blockId, { chatHistory: [], collapsed: true });
+    setSuggestions([]);
+    setAnswer(blockId, { chatHistory: [], collapsed: true, suggestions: [] });
   };
 
   return (

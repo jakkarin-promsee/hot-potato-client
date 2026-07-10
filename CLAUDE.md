@@ -94,7 +94,7 @@ Routes under `/login … /settings` render inside `AppLayout` (shared nav chrome
 - **`RequireLogin`** — soft gate; renders an inline "please sign in" prompt (with `title`/`description` props) instead of redirecting. Used for personal-but-not-secret pages.
 - **`PublicRoute`** — for auth-only-when-logged-out pages (e.g. `/login`); bounces authenticated users away.
 
-> **Phase-2 note:** the login/sign-in flow is a known cleanup target. Touch `Login`, the guards, and `lib/axios.ts`'s force-relogin handling together.
+> **Roadmap note (Phase 2.B):** the login/sign-in flow is a known cleanup target — see [`../ROADMAP.md`](../ROADMAP.md). Touch `Login`, the guards, and `lib/axios.ts`'s force-relogin handling together.
 
 ## State management (Zustand)
 
@@ -154,15 +154,16 @@ Each `*Node.ts` defines the TipTap node (schema/attrs); each `*View.tsx` is its 
 
 ### How questions reach the AI
 
-`editor/extensions/questionFeedbackApi.ts` is the bridge from question views to the server's `/api/chat/*`:
+`editor/extensions/tutorApi.ts` is the **single bridge** from every AI surface to the server's unified `POST /api/chat/tutor` (rewired in Tier 0 Phase 0.A, 2026-07-10 — the legacy `/chat/ask|feedback|write-evaluate` endpoints and `questionFeedbackApi.ts` are gone):
 
-- `requestQuestionFeedback(...)` → `POST /chat/feedback` (structured answers).
-- `requestWriteEvaluation(...)` → `POST /chat/write-evaluate` (open-ended answers).
-- `requestFeedbackFollowup(...)` → builds a follow-up coaching turn on top of `/chat/feedback` (used by `FeedbackDiscussionPanel.tsx` for the back-and-forth thread).
+- `callTutor({ contentId, blockId, mode, message, ... })` → `POST /chat/tutor`. Returns `{ reply, suggestions, sessionId }`; throws `AiUnavailableError` on axios error or empty reply (callers show `AiErrorRetry`, never fake replies).
+- Modes per surface: first submit on choice/blank-choice cards → `question_feedback` (client still computes the deterministic level via `questionEvaluation.ts` and passes it in `questionContext.evaluation` + per-choice/per-blank `diagnostics`); blank-write cards → `question_feedback` with `level: "ai_judge"`; write cards → `write_evaluation`; the follow-up thread on any card → `followup` (plain conversation turn, **no evaluation payload** — this is what lets "สวัสดี" be small talk); Ask-AI modal + `QuestionAgentNode` → `free_chat`.
+- `feedbackThreadToClientThread(...)` / `qaHistoryToClientThread(...)` map the locally stored thread shapes (role `"ai"` client-side) to the tutor contract (role `"tutor"`), prepending the original answer + first feedback so **anonymous** users keep context. Logged-in users get server-side `ChatSession` history instead (the server ignores `clientThread` for them).
+- `contentId` comes from `useCanvasStore((s) => s.contentId)`; the Ask-AI modal uses the pseudo-block id `"__lesson_ai_assistant__"`. The modal also sends a trimmed reading-position hint as `currentSection` (from `getQuestionAgentViewportContext`, the only survivor in `questionAgentContext.ts`).
+- Every response's `suggestions` array is stored additively on the block answer (`suggestions?: string[]`) — rendered as tappable chips (Phase 0.C).
+- The client **no longer serializes lesson text for the AI** — the server owns lesson context (`lessonContext.service.ts`).
 
-Each call throws `AiUnavailableError` on failure (axios error or empty response). Callers show an `AiErrorRetry` inline box with Thai copy instead of fake feedback strings. Feedback verbosity is controlled by `feedbackMode` (`quick_check` | `full_reflection`, see `questionMode.ts`). The `QuestionAgentNode` free-Q&A uses `/chat/ask` with the lesson as `context` (see `questionAgentContext.ts`).
-
-> **⚠️ This whole bridge is being reworked** (roadmap Phases 1 → 5). Phase 0 replaced silent Thai fallback strings with honest `AiUnavailableError` + retry UI. **Phase 5** points all four flows at a single new `POST /api/chat/tutor` endpoint and deletes the `requestFeedbackFollowup` hack (which today fakes a conversation by re-calling `/chat/feedback`). Read [`../ROADMAP-detailed.md`](../ROADMAP-detailed.md) before changing anything in `questionFeedbackApi.ts` or the `Question*View.tsx` files.
+Feedback verbosity is still controlled by `feedbackMode` (`quick_check` | `full_reflection`, see `questionMode.ts`).
 
 ### Editor UI shell
 

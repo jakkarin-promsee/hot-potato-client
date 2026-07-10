@@ -5,13 +5,14 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import { useCanvasStore } from "@/stores/canvas.store";
 import { useAnswerStore } from "@/stores/content-answer.store";
 import { useAuthStore } from "@/stores/auth.store";
-import api from "@/lib/axios";
 import { Bot, Pencil, SendHorizontal, X } from "lucide-react";
+import { getQuestionAgentViewportContext } from "./extensions/questionAgentContext";
 import {
-  buildQuestionAgentUserContext,
-  getQuestionAgentContextFromEditor,
-  getQuestionAgentViewportContext,
-} from "./extensions/questionAgentContext";
+  AiUnavailableError,
+  callTutor,
+  qaHistoryToClientThread,
+} from "./extensions/tutorApi";
+import AiErrorRetry from "./extensions/AiErrorRetry";
 
 const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 4.0;
@@ -44,6 +45,7 @@ interface LessonAiMessage {
 interface LessonAiAnswer {
   chatHistory: LessonAiMessage[];
   open?: boolean;
+  suggestions?: string[];
 }
 
 const LESSON_AI_BLOCK_ID = "__lesson_ai_assistant__";
@@ -77,26 +79,8 @@ function isAtTopOfVerticalScrollChain(
   return container.scrollTop <= 1;
 }
 
-const buildFallbackReply = (question: string) =>
-  `I couldn't get an AI response right now. Your question was: "${question}". Please try again.`;
-
-async function askAi(
-  question: string,
-  context: string,
-  userContext: string,
-): Promise<string> {
-  try {
-    const response = await api.post<{ answer?: string }>("/chat/ask", {
-      prompt: question,
-      context,
-      userContext,
-    });
-    const answer = response.data?.answer?.trim();
-    return answer || buildFallbackReply(question);
-  } catch {
-    return buildFallbackReply(question);
-  }
-}
+/** Cap for the reading-position hint sent as `currentSection` (server caps at 500). */
+const CURRENT_SECTION_MAX_CHARS = 300;
 
 function TiptapViewer({ onScrollDirectionChange }: TiptapViewerProps) {
   const navigate = useNavigate();
@@ -105,6 +89,7 @@ function TiptapViewer({ onScrollDirectionChange }: TiptapViewerProps) {
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [questionInput, setQuestionInput] = useState("");
   const [isAsking, setIsAsking] = useState(false);
+  const [askError, setAskError] = useState(false);
   const [isConfirmClear, setIsConfirmClear] = useState(false);
 
   const { tiptapJson, contentId, ownerId, collaborators } = useCanvasStore();
@@ -126,10 +111,14 @@ function TiptapViewer({ onScrollDirectionChange }: TiptapViewerProps) {
   const [chatHistory, setChatHistory] = useState<LessonAiMessage[]>(
     savedLessonAi?.chatHistory ?? [],
   );
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>(
+    savedLessonAi?.suggestions ?? [],
+  );
 
   useEffect(() => {
     if (!savedLessonAi) return;
     setChatHistory(savedLessonAi.chatHistory ?? []);
+    setAiSuggestions(savedLessonAi.suggestions ?? []);
     if (typeof savedLessonAi.open === "boolean") {
       setIsAiOpen(savedLessonAi.open);
     }
@@ -248,27 +237,39 @@ function TiptapViewer({ onScrollDirectionChange }: TiptapViewerProps) {
     if (!question || !editor || isAsking) return;
 
     setIsAsking(true);
+    setAskError(false);
     try {
-      const fullContext = getQuestionAgentContextFromEditor(editor);
       const viewportContext = mainRef.current
         ? getQuestionAgentViewportContext(mainRef.current)
         : "";
-      const context = viewportContext
-        ? `Current reading position:\n${viewportContext}\n\nFull content:\n${fullContext}`
-        : fullContext;
-      const userContext = buildQuestionAgentUserContext(
-        answers,
-        LESSON_AI_BLOCK_ID,
-        chatHistory,
-      );
-      const answer = await askAi(question, context, userContext);
+      const { reply, suggestions } = await callTutor({
+        contentId: contentId ?? "",
+        blockId: LESSON_AI_BLOCK_ID,
+        mode: "free_chat",
+        message: question,
+        clientThread: qaHistoryToClientThread(chatHistory),
+        currentSection: viewportContext
+          ? viewportContext.slice(0, CURRENT_SECTION_MAX_CHARS)
+          : undefined,
+      });
       const nextHistory = [
         ...chatHistory,
-        { question, answer, createdAt: new Date().toISOString() },
+        { question, answer: reply, createdAt: new Date().toISOString() },
       ];
       setChatHistory(nextHistory);
+      setAiSuggestions(suggestions);
       setQuestionInput("");
-      setAnswer(LESSON_AI_BLOCK_ID, { chatHistory: nextHistory, open: true });
+      setAnswer(LESSON_AI_BLOCK_ID, {
+        chatHistory: nextHistory,
+        open: true,
+        suggestions,
+      });
+    } catch (error) {
+      if (error instanceof AiUnavailableError) {
+        // Keep the question in the input; show an inline retry instead of
+        // saving a fake reply into history.
+        setAskError(true);
+      }
     } finally {
       setIsAsking(false);
     }
@@ -276,17 +277,30 @@ function TiptapViewer({ onScrollDirectionChange }: TiptapViewerProps) {
 
   const closeAi = () => {
     setIsAiOpen(false);
-    setAnswer(LESSON_AI_BLOCK_ID, { chatHistory, open: false });
+    setAnswer(LESSON_AI_BLOCK_ID, {
+      chatHistory,
+      open: false,
+      suggestions: aiSuggestions,
+    });
   };
 
   const openAi = () => {
     setIsAiOpen(true);
-    setAnswer(LESSON_AI_BLOCK_ID, { chatHistory, open: true });
+    setAnswer(LESSON_AI_BLOCK_ID, {
+      chatHistory,
+      open: true,
+      suggestions: aiSuggestions,
+    });
   };
 
   const clearAiHistory = () => {
     setChatHistory([]);
-    setAnswer(LESSON_AI_BLOCK_ID, { chatHistory: [], open: true });
+    setAiSuggestions([]);
+    setAnswer(LESSON_AI_BLOCK_ID, {
+      chatHistory: [],
+      open: true,
+      suggestions: [],
+    });
     setIsConfirmClear(false);
   };
 
@@ -398,6 +412,12 @@ function TiptapViewer({ onScrollDirectionChange }: TiptapViewerProps) {
                     </div>
                   </div>
                 ))
+              )}
+              {askError && (
+                <AiErrorRetry
+                  onRetry={() => void handleAsk()}
+                  loading={isAsking}
+                />
               )}
             </div>
 

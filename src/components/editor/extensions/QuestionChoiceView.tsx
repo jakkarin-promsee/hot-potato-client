@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { NodeViewWrapper, NodeViewProps } from "@tiptap/react";
 import { NodeSelection } from "@tiptap/pm/state";
 import { useAnswerStore } from "@/stores/content-answer.store";
+import { useCanvasStore } from "@/stores/canvas.store";
 import FeedbackDiscussionPanel, {
   type FeedbackThreadMessage,
 } from "./FeedbackDiscussionPanel";
@@ -10,9 +11,9 @@ import type { QuestionFeedbackMode } from "./questionMode";
 import BlockMoveControls from "./BlockMoveControls";
 import {
   AiUnavailableError,
-  requestFeedbackFollowup,
-  requestQuestionFeedback,
-} from "./questionFeedbackApi";
+  callTutor,
+  feedbackThreadToClientThread,
+} from "./tutorApi";
 import AiErrorRetry from "./AiErrorRetry";
 import { evaluateChoiceAnswer } from "./questionEvaluation";
 
@@ -331,6 +332,7 @@ interface BlockAnswer {
   aiFeedback?: string;
   feedbackThread?: FeedbackThreadMessage[];
   threadOpen?: boolean;
+  suggestions?: string[];
 }
 
 function ViewerView({ attrs }: ViewerViewProps) {
@@ -341,6 +343,7 @@ function ViewerView({ attrs }: ViewerViewProps) {
   // ── Store ──────────────────────────────────────────────────────
   const answers = useAnswerStore((s) => s.answers);
   const setAnswer = useAnswerStore((s) => s.setAnswer);
+  const contentId = useCanvasStore((s) => s.contentId);
 
   // Restore from store or default
   const savedAnswer = answers[blockId] as BlockAnswer | undefined;
@@ -357,6 +360,9 @@ function ViewerView({ attrs }: ViewerViewProps) {
     savedAnswer?.feedbackThread ?? [],
   );
   const [threadOpen, setThreadOpen] = useState(savedAnswer?.threadOpen ?? false);
+  const [suggestions, setSuggestions] = useState<string[]>(
+    savedAnswer?.suggestions ?? [],
+  );
   const [isThreadLoading, setIsThreadLoading] = useState(false);
   const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
   const [aiError, setAiError] = useState(false);
@@ -371,6 +377,7 @@ function ViewerView({ attrs }: ViewerViewProps) {
         aiFeedback,
         feedbackThread,
         threadOpen,
+        suggestions,
         ...next,
       });
     },
@@ -381,6 +388,7 @@ function ViewerView({ attrs }: ViewerViewProps) {
       selectedIndices,
       setAnswer,
       submitted,
+      suggestions,
       threadOpen,
     ],
   );
@@ -393,6 +401,7 @@ function ViewerView({ attrs }: ViewerViewProps) {
       setAiFeedback(savedAnswer.aiFeedback ?? "");
       setFeedbackThread(savedAnswer.feedbackThread ?? []);
       setThreadOpen(savedAnswer.threadOpen ?? false);
+      setSuggestions(savedAnswer.suggestions ?? []);
     }
   }, [answers[blockId]]); // re-sync when this block's answer changes
 
@@ -415,12 +424,14 @@ function ViewerView({ attrs }: ViewerViewProps) {
     // Save selection instantly (not submitted yet)
     setFeedbackThread([]);
     setThreadOpen(false);
+    setSuggestions([]);
     persistAnswer({
       selected: next,
       submitted: false,
       aiFeedback: "",
       feedbackThread: [],
       threadOpen: false,
+      suggestions: [],
     });
   };
 
@@ -430,6 +441,7 @@ function ViewerView({ attrs }: ViewerViewProps) {
     setAiError(false);
     setFeedbackThread([]);
     setThreadOpen(false);
+    setSuggestions([]);
     // Save with submitted: true — this triggers 30s sync to DB
     persistAnswer({
       selected: selectedIndices,
@@ -437,6 +449,7 @@ function ViewerView({ attrs }: ViewerViewProps) {
       aiFeedback: "",
       feedbackThread: [],
       threadOpen: false,
+      suggestions: [],
     });
 
     setIsFeedbackLoading(true);
@@ -450,22 +463,31 @@ function ViewerView({ attrs }: ViewerViewProps) {
         userAnswer,
       } = evaluateChoiceAnswer(choices, selectedIndices);
 
-      const feedback = await requestQuestionFeedback({
-        question: question || "Choice question",
-        correctAnswer,
-        userAnswer,
-        evaluationLevel,
-        accuracyPercent,
-        diagnostics: `missedCorrect=${missedCorrect || "(none)"}; wrongSelected=${wrongSelected || "(none)"}`,
-        feedbackMode,
+      const { reply, suggestions: nextSuggestions } = await callTutor({
+        contentId: contentId ?? "",
+        blockId,
+        mode: "question_feedback",
+        message: userAnswer || "(ไม่ได้เลือกคำตอบ)",
+        questionContext: {
+          question: question || "Choice question",
+          guideAnswer: correctAnswer,
+          evaluation: {
+            level: evaluationLevel,
+            accuracyPercent,
+            diagnostics: `missedCorrect=${missedCorrect || "(none)"}; wrongSelected=${wrongSelected || "(none)"}`,
+          },
+          feedbackMode,
+        },
       });
-      setAiFeedback(feedback);
+      setAiFeedback(reply);
+      setSuggestions(nextSuggestions);
       persistAnswer({
         selected: selectedIndices,
         submitted: true,
-        aiFeedback: feedback,
+        aiFeedback: reply,
         feedbackThread: [],
         threadOpen: false,
+        suggestions: nextSuggestions,
       });
     } catch (error) {
       if (error instanceof AiUnavailableError) {
@@ -482,12 +504,14 @@ function ViewerView({ attrs }: ViewerViewProps) {
     setAiFeedback("");
     setFeedbackThread([]);
     setThreadOpen(false);
+    setSuggestions([]);
     persistAnswer({
       selected: [],
       submitted: false,
       aiFeedback: "",
       feedbackThread: [],
       threadOpen: false,
+      suggestions: [],
     });
   };
 
@@ -506,11 +530,6 @@ function ViewerView({ attrs }: ViewerViewProps) {
       setFeedbackThread(threadWithStudent);
       persistAnswer({ feedbackThread: threadWithStudent, threadOpen: true });
 
-      const correctAnswer = choices
-        .filter((choice) => choice.correct)
-        .map((choice) => choice.text.trim())
-        .filter(Boolean)
-        .join(" | ");
       const userAnswer = selectedIndices
         .map((idx) => choices[idx]?.text?.trim() ?? "")
         .filter(Boolean)
@@ -519,28 +538,32 @@ function ViewerView({ attrs }: ViewerViewProps) {
       setIsThreadLoading(true);
       setThreadAiError(false);
       try {
-        const aiReply = await requestFeedbackFollowup({
-          topic: question || "Choice question",
-          studentAnswer: userAnswer,
-          initialFeedback: aiFeedback,
-          followupQuestion: message,
-          expectedAnswer: correctAnswer,
-          feedbackMode,
-          thread: threadWithStudent.map((entry) => ({
-            role: entry.role,
-            text: entry.text,
-          })),
+        const { reply, suggestions: nextSuggestions } = await callTutor({
+          contentId: contentId ?? "",
+          blockId,
+          mode: "followup",
+          message,
+          clientThread: feedbackThreadToClientThread({
+            originalAnswer: userAnswer,
+            initialFeedback: aiFeedback,
+            thread: feedbackThread,
+          }),
         });
         const aiMessage: FeedbackThreadMessage = {
           role: "ai",
-          text: aiReply,
+          text: reply,
           createdAt: new Date().toISOString(),
         };
         const nextThread = [...threadWithStudent, aiMessage];
         setFeedbackThread(nextThread);
+        setSuggestions(nextSuggestions);
         setThreadAiError(false);
         setThreadRetryMessage("");
-        persistAnswer({ feedbackThread: nextThread, threadOpen: true });
+        persistAnswer({
+          feedbackThread: nextThread,
+          threadOpen: true,
+          suggestions: nextSuggestions,
+        });
       } catch (error) {
         if (error instanceof AiUnavailableError) {
           setThreadAiError(true);
@@ -554,11 +577,11 @@ function ViewerView({ attrs }: ViewerViewProps) {
     },
     [
       aiFeedback,
+      blockId,
       choices,
-      feedbackMode,
+      contentId,
       feedbackThread,
       persistAnswer,
-      question,
       selectedIndices,
     ],
   );

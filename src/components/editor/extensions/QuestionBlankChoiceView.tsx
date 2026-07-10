@@ -2,15 +2,16 @@ import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { NodeViewWrapper, NodeViewProps } from "@tiptap/react";
 import { NodeSelection } from "@tiptap/pm/state";
 import { useAnswerStore } from "@/stores/content-answer.store";
+import { useCanvasStore } from "@/stores/canvas.store";
 import FeedbackDiscussionPanel, {
   type FeedbackThreadMessage,
 } from "./FeedbackDiscussionPanel";
 import QuestionFeedbackModeToggle from "./QuestionFeedbackModeToggle";
 import {
   AiUnavailableError,
-  requestFeedbackFollowup,
-  requestQuestionFeedback,
-} from "./questionFeedbackApi";
+  callTutor,
+  feedbackThreadToClientThread,
+} from "./tutorApi";
 import AiErrorRetry from "./AiErrorRetry";
 import type { QuestionFeedbackMode } from "./questionMode";
 import { Check, Eye, EyeOff, HelpCircle, SquareDashedMousePointer, X } from "lucide-react";
@@ -24,6 +25,7 @@ interface BlockAnswer {
   aiFeedback?: string;
   feedbackThread?: FeedbackThreadMessage[];
   threadOpen?: boolean;
+  suggestions?: string[];
 }
 
 const BLANK_TOKEN_REGEX = /\[Q-(\d+)\]|\{\{(\d+)\}\}/g;
@@ -304,6 +306,7 @@ function ViewerView({ attrs }: { attrs: QuestionBlankChoiceAttrs }) {
   const { id: blockId, template, choices, correctByBlank, feedbackMode } = attrs;
   const answers = useAnswerStore((s) => s.answers);
   const setAnswer = useAnswerStore((s) => s.setAnswer);
+  const contentId = useCanvasStore((s) => s.contentId);
 
   const blankIndices = useMemo(() => getBlankIndices(template), [template]);
   const pieces = useMemo(() => renderTemplatePieces(template), [template]);
@@ -323,6 +326,9 @@ function ViewerView({ attrs }: { attrs: QuestionBlankChoiceAttrs }) {
     saved?.feedbackThread ?? [],
   );
   const [threadOpen, setThreadOpen] = useState(saved?.threadOpen ?? false);
+  const [suggestions, setSuggestions] = useState<string[]>(
+    saved?.suggestions ?? [],
+  );
   const [isThreadLoading, setIsThreadLoading] = useState(false);
   const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
   const [aiError, setAiError] = useState(false);
@@ -338,6 +344,7 @@ function ViewerView({ attrs }: { attrs: QuestionBlankChoiceAttrs }) {
         aiFeedback,
         feedbackThread,
         threadOpen,
+        suggestions,
         ...next,
       });
     },
@@ -348,6 +355,7 @@ function ViewerView({ attrs }: { attrs: QuestionBlankChoiceAttrs }) {
       placedByBlank,
       setAnswer,
       submitted,
+      suggestions,
       threadOpen,
     ],
   );
@@ -359,6 +367,7 @@ function ViewerView({ attrs }: { attrs: QuestionBlankChoiceAttrs }) {
     setAiFeedback(saved?.aiFeedback ?? "");
     setFeedbackThread(saved?.feedbackThread ?? []);
     setThreadOpen(saved?.threadOpen ?? false);
+    setSuggestions(saved?.suggestions ?? []);
   }, [answers[blockId], blankIndices]);
 
   const usedChoiceSet = new Set(placedByBlank.filter((v): v is number => v !== null));
@@ -384,12 +393,14 @@ function ViewerView({ attrs }: { attrs: QuestionBlankChoiceAttrs }) {
       next[blankPos] = choiceIdx;
       setFeedbackThread([]);
       setThreadOpen(false);
+      setSuggestions([]);
       persistAnswer({
         placedByBlank: next,
         submitted: false,
         aiFeedback: "",
         feedbackThread: [],
         threadOpen: false,
+        suggestions: [],
       });
       return next;
     });
@@ -401,12 +412,14 @@ function ViewerView({ attrs }: { attrs: QuestionBlankChoiceAttrs }) {
     setAiError(false);
     setFeedbackThread([]);
     setThreadOpen(false);
+    setSuggestions([]);
     persistAnswer({
       placedByBlank,
       submitted: true,
       aiFeedback: "",
       feedbackThread: [],
       threadOpen: false,
+      suggestions: [],
     });
 
     setIsFeedbackLoading(true);
@@ -450,22 +463,31 @@ function ViewerView({ attrs }: { attrs: QuestionBlankChoiceAttrs }) {
         .filter(Boolean)
         .join(" ; ");
 
-      const feedback = await requestQuestionFeedback({
-        question: template || "Fill blank choice question",
-        correctAnswer,
-        userAnswer,
-        evaluationLevel,
-        accuracyPercent,
-        diagnostics,
-        feedbackMode,
+      const { reply, suggestions: nextSuggestions } = await callTutor({
+        contentId: contentId ?? "",
+        blockId,
+        mode: "question_feedback",
+        message: userAnswer || "(ไม่ได้เลือกคำตอบ)",
+        questionContext: {
+          question: template || "Fill blank choice question",
+          guideAnswer: correctAnswer,
+          evaluation: {
+            level: evaluationLevel,
+            accuracyPercent,
+            diagnostics,
+          },
+          feedbackMode,
+        },
       });
-      setAiFeedback(feedback);
+      setAiFeedback(reply);
+      setSuggestions(nextSuggestions);
       persistAnswer({
         placedByBlank,
         submitted: true,
-        aiFeedback: feedback,
+        aiFeedback: reply,
         feedbackThread: [],
         threadOpen: false,
+        suggestions: nextSuggestions,
       });
     } catch (error) {
       if (error instanceof AiUnavailableError) {
@@ -483,12 +505,14 @@ function ViewerView({ attrs }: { attrs: QuestionBlankChoiceAttrs }) {
     setAiFeedback("");
     setFeedbackThread([]);
     setThreadOpen(false);
+    setSuggestions([]);
     persistAnswer({
       placedByBlank: empty,
       submitted: false,
       aiFeedback: "",
       feedbackThread: [],
       threadOpen: false,
+      suggestions: [],
     });
   };
 
@@ -504,13 +528,6 @@ function ViewerView({ attrs }: { attrs: QuestionBlankChoiceAttrs }) {
       setFeedbackThread(threadWithStudent);
       persistAnswer({ feedbackThread: threadWithStudent, threadOpen: true });
 
-      const expectedAnswer = blankIndices
-        .map((token, i) => {
-          const correctIdx = correctByBlank[i] ?? -1;
-          const text = correctIdx >= 0 ? choices[correctIdx] ?? "" : "";
-          return `[Q-${token}] = ${text || "(none)"}`;
-        })
-        .join(" | ");
       const userAnswer = blankIndices
         .map((token, i) => {
           const placed = placedByBlank[i];
@@ -522,28 +539,32 @@ function ViewerView({ attrs }: { attrs: QuestionBlankChoiceAttrs }) {
       setIsThreadLoading(true);
       setThreadAiError(false);
       try {
-        const aiReply = await requestFeedbackFollowup({
-          topic: template || "Fill blank choice question",
-          studentAnswer: userAnswer,
-          initialFeedback: aiFeedback,
-          followupQuestion: message,
-          expectedAnswer,
-          feedbackMode,
-          thread: threadWithStudent.map((entry) => ({
-            role: entry.role,
-            text: entry.text,
-          })),
+        const { reply, suggestions: nextSuggestions } = await callTutor({
+          contentId: contentId ?? "",
+          blockId,
+          mode: "followup",
+          message,
+          clientThread: feedbackThreadToClientThread({
+            originalAnswer: userAnswer,
+            initialFeedback: aiFeedback,
+            thread: feedbackThread,
+          }),
         });
         const aiMessage: FeedbackThreadMessage = {
           role: "ai",
-          text: aiReply,
+          text: reply,
           createdAt: new Date().toISOString(),
         };
         const nextThread = [...threadWithStudent, aiMessage];
         setFeedbackThread(nextThread);
+        setSuggestions(nextSuggestions);
         setThreadAiError(false);
         setThreadRetryMessage("");
-        persistAnswer({ feedbackThread: nextThread, threadOpen: true });
+        persistAnswer({
+          feedbackThread: nextThread,
+          threadOpen: true,
+          suggestions: nextSuggestions,
+        });
       } catch (error) {
         if (error instanceof AiUnavailableError) {
           setThreadAiError(true);
@@ -558,13 +579,12 @@ function ViewerView({ attrs }: { attrs: QuestionBlankChoiceAttrs }) {
     [
       aiFeedback,
       blankIndices,
+      blockId,
       choices,
-      correctByBlank,
-      feedbackMode,
+      contentId,
       feedbackThread,
       persistAnswer,
       placedByBlank,
-      template,
     ],
   );
 

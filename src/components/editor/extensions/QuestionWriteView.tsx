@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { NodeViewWrapper, NodeViewProps } from "@tiptap/react";
 import { NodeSelection } from "@tiptap/pm/state";
 import { useAnswerStore } from "@/stores/content-answer.store";
+import { useCanvasStore } from "@/stores/canvas.store";
 import {
   Eye,
   EyeOff,
@@ -15,9 +16,9 @@ import QuestionFeedbackModeToggle from "./QuestionFeedbackModeToggle";
 import type { QuestionFeedbackMode } from "./questionMode";
 import {
   AiUnavailableError,
-  requestFeedbackFollowup,
-  requestWriteEvaluation,
-} from "./questionFeedbackApi";
+  callTutor,
+  feedbackThreadToClientThread,
+} from "./tutorApi";
 import AiErrorRetry from "./AiErrorRetry";
 import BlockMoveControls from "./BlockMoveControls";
 import { useEditorI18n } from "../editor.i18n";
@@ -35,6 +36,7 @@ interface BlockAnswer {
   aiFeedback?: string;
   feedbackThread?: FeedbackThreadMessage[];
   threadOpen?: boolean;
+  suggestions?: string[];
 }
 
 function useAutoGrow(value: string) {
@@ -132,6 +134,7 @@ function ViewerView({ attrs }: ViewerViewProps) {
   const { id: blockId, question, answer, feedbackMode } = attrs;
   const answers = useAnswerStore((s) => s.answers);
   const setAnswer = useAnswerStore((s) => s.setAnswer);
+  const contentId = useCanvasStore((s) => s.contentId);
 
   const savedAnswer = answers[blockId] as BlockAnswer | undefined;
   const [input, setInput] = useState(savedAnswer?.answer ?? "");
@@ -140,6 +143,9 @@ function ViewerView({ attrs }: ViewerViewProps) {
   const [threadOpen, setThreadOpen] = useState(savedAnswer?.threadOpen ?? false);
   const [feedbackThread, setFeedbackThread] = useState<FeedbackThreadMessage[]>(
     savedAnswer?.feedbackThread ?? [],
+  );
+  const [suggestions, setSuggestions] = useState<string[]>(
+    savedAnswer?.suggestions ?? [],
   );
   const [isThreadLoading, setIsThreadLoading] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
@@ -156,10 +162,20 @@ function ViewerView({ attrs }: ViewerViewProps) {
         aiFeedback,
         feedbackThread,
         threadOpen,
+        suggestions,
         ...next,
       });
     },
-    [aiFeedback, blockId, feedbackThread, input, setAnswer, submitted, threadOpen],
+    [
+      aiFeedback,
+      blockId,
+      feedbackThread,
+      input,
+      setAnswer,
+      submitted,
+      suggestions,
+      threadOpen,
+    ],
   );
 
   useEffect(() => {
@@ -169,6 +185,7 @@ function ViewerView({ attrs }: ViewerViewProps) {
     setAiFeedback(savedAnswer.aiFeedback ?? "");
     setFeedbackThread(savedAnswer.feedbackThread ?? []);
     setThreadOpen(savedAnswer.threadOpen ?? false);
+    setSuggestions(savedAnswer.suggestions ?? []);
   }, [answers[blockId]]);
 
   const canSubmit = input.trim().length > 0;
@@ -179,29 +196,38 @@ function ViewerView({ attrs }: ViewerViewProps) {
     setAiError(false);
     setFeedbackThread([]);
     setThreadOpen(false);
+    setSuggestions([]);
     persistAnswer({
       answer: input,
       submitted: true,
       aiFeedback: "",
       feedbackThread: [],
       threadOpen: false,
+      suggestions: [],
     });
 
     setIsEvaluating(true);
     try {
-      const feedback = await requestWriteEvaluation({
-        question: question || "Writing question",
-        guideAnswer: answer,
-        studentAnswer: input,
-        feedbackMode,
+      const { reply, suggestions: nextSuggestions } = await callTutor({
+        contentId: contentId ?? "",
+        blockId,
+        mode: "write_evaluation",
+        message: input,
+        questionContext: {
+          question: question || "Writing question",
+          guideAnswer: answer,
+          feedbackMode,
+        },
       });
-      setAiFeedback(feedback);
+      setAiFeedback(reply);
+      setSuggestions(nextSuggestions);
       persistAnswer({
         answer: input,
         submitted: true,
-        aiFeedback: feedback,
+        aiFeedback: reply,
         feedbackThread: [],
         threadOpen: false,
+        suggestions: nextSuggestions,
       });
     } catch (error) {
       if (error instanceof AiUnavailableError) {
@@ -218,12 +244,14 @@ function ViewerView({ attrs }: ViewerViewProps) {
     setAiFeedback("");
     setThreadOpen(false);
     setFeedbackThread([]);
+    setSuggestions([]);
     persistAnswer({
       answer: "",
       submitted: false,
       aiFeedback: "",
       feedbackThread: [],
       threadOpen: false,
+      suggestions: [],
     });
   };
 
@@ -242,28 +270,32 @@ function ViewerView({ attrs }: ViewerViewProps) {
       setIsThreadLoading(true);
       setThreadAiError(false);
       try {
-        const aiReply = await requestFeedbackFollowup({
-          topic: question || "Writing question",
-          studentAnswer: input,
-          initialFeedback: aiFeedback,
-          followupQuestion: message,
-          expectedAnswer: answer,
-          feedbackMode,
-          thread: threadWithStudent.map((entry) => ({
-            role: entry.role,
-            text: entry.text,
-          })),
+        const { reply, suggestions: nextSuggestions } = await callTutor({
+          contentId: contentId ?? "",
+          blockId,
+          mode: "followup",
+          message,
+          clientThread: feedbackThreadToClientThread({
+            originalAnswer: input,
+            initialFeedback: aiFeedback,
+            thread: feedbackThread,
+          }),
         });
         const aiMessage: FeedbackThreadMessage = {
           role: "ai",
-          text: aiReply,
+          text: reply,
           createdAt: new Date().toISOString(),
         };
         const nextThread = [...threadWithStudent, aiMessage];
         setFeedbackThread(nextThread);
+        setSuggestions(nextSuggestions);
         setThreadAiError(false);
         setThreadRetryMessage("");
-        persistAnswer({ feedbackThread: nextThread, threadOpen: true });
+        persistAnswer({
+          feedbackThread: nextThread,
+          threadOpen: true,
+          suggestions: nextSuggestions,
+        });
       } catch (error) {
         if (error instanceof AiUnavailableError) {
           setThreadAiError(true);
@@ -275,7 +307,7 @@ function ViewerView({ attrs }: ViewerViewProps) {
         setIsThreadLoading(false);
       }
     },
-    [aiFeedback, answer, feedbackMode, feedbackThread, input, persistAnswer, question],
+    [aiFeedback, blockId, contentId, feedbackThread, input, persistAnswer],
   );
 
   return (
@@ -298,12 +330,14 @@ function ViewerView({ attrs }: ViewerViewProps) {
           setAiFeedback("");
           setFeedbackThread([]);
           setThreadOpen(false);
+          setSuggestions([]);
           persistAnswer({
             answer: next,
             submitted: false,
             aiFeedback: "",
             feedbackThread: [],
             threadOpen: false,
+            suggestions: [],
           });
         }}
         className={[
