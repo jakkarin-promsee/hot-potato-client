@@ -29,9 +29,10 @@ npm test           # vitest run
 
 ```
 client/src/components/editor/extensions/__tests__/
-├── questionEvaluation.test.ts   # choice accuracy math
-├── questionAgentContext.test.ts # chat-history serializer
-└── questionFeedbackApi.test.ts  # axios bridge + fallback behavior
+├── questionEvaluation.test.ts        # choice accuracy math (deterministic)
+├── tutorApi.test.ts                  # unified tutor bridge: payloads, role mapping, errors
+├── MarkdownMessage.test.tsx          # markdown allowlist renderer (no HTML injection)
+└── FeedbackDiscussionPanel.test.tsx  # flat thread + suggestion chips (0.C)
 ```
 
 **Working agreement:** every later phase ships tests for its own acceptance criteria; you're not done until `npm test` is green.
