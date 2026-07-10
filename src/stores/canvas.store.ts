@@ -11,6 +11,20 @@ function normalizeMongoId(raw: unknown): string | null {
   return String(raw);
 }
 
+export type AgentSettings = {
+  persona_note: string;
+  allow_direct_answers: boolean;
+  scope: "lesson_only" | "lesson_plus_general";
+  custom_guidelines: string;
+};
+
+const defaultAgentSettings: AgentSettings = {
+  persona_note: "",
+  allow_direct_answers: false,
+  scope: "lesson_plus_general",
+  custom_guidelines: "",
+};
+
 interface CanvasState {
   contentId: string | null;
   /** Content owner user id (from load); used on view page for edit affordance. */
@@ -22,6 +36,7 @@ interface CanvasState {
   accessType: "public" | "link-only" | "private";
   topics: string[];
   description: string;
+  agentSettings: AgentSettings;
   isSaving: boolean;
   isLoading: boolean;
   isDirty: boolean; // unsaved changes?
@@ -40,6 +55,7 @@ interface CanvasState {
   setAccessType: (accessType: "public" | "link-only" | "private") => void;
   setTopics: (topics: string[]) => void;
   setDescription: (description: string) => void;
+  setAgentSettings: (settings: AgentSettings) => void;
 }
 
 export const useCanvasStore = create<CanvasState>((set, get) => ({
@@ -52,6 +68,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   accessType: "private",
   topics: [],
   description: "",
+  agentSettings: { ...defaultAgentSettings },
   isSaving: false,
   isLoading: false,
   isDirty: false,
@@ -84,6 +101,24 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
         accessType: res.data.access_type ?? "private",
         topics: Array.isArray(res.data.topics) ? res.data.topics : [],
         description: res.data.description ?? "",
+        agentSettings: res.data.agent_settings
+          ? {
+              persona_note:
+                typeof res.data.agent_settings.persona_note === "string"
+                  ? res.data.agent_settings.persona_note
+                  : "",
+              allow_direct_answers:
+                res.data.agent_settings.allow_direct_answers === true,
+              scope:
+                res.data.agent_settings.scope === "lesson_only"
+                  ? "lesson_only"
+                  : "lesson_plus_general",
+              custom_guidelines:
+                typeof res.data.agent_settings.custom_guidelines === "string"
+                  ? res.data.agent_settings.custom_guidelines
+                  : "",
+            }
+          : { ...defaultAgentSettings },
         updatedAt: res.data.updatedAt, // 👈 store server time
         isLoading: false,
         isDirty: false,
@@ -119,6 +154,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       accessType,
       topics,
       description,
+      agentSettings,
       updatedAt,
       isDirty,
     } = get();
@@ -135,6 +171,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
         access_type: accessType,
         topics,
         description,
+        agent_settings: agentSettings,
         clientUpdatedAt: updatedAt, // 👈 send our version timestamp
       });
 
@@ -160,6 +197,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       accessType,
       topics,
       description,
+      agentSettings,
     } = get();
     if (!contentId) return;
 
@@ -172,6 +210,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       access_type: accessType,
       topics,
       description,
+      agent_settings: agentSettings,
       // 👆 no clientUpdatedAt — skips version check
     });
     set({
@@ -189,4 +228,5 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   setAccessType: (accessType) => set({ accessType, isDirty: true }),
   setTopics: (topics) => set({ topics, isDirty: true }),
   setDescription: (description) => set({ description, isDirty: true }),
+  setAgentSettings: (agentSettings) => set({ agentSettings, isDirty: true }),
 }));

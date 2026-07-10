@@ -109,7 +109,8 @@ Global stores in `src/stores/`. Each is a `create()` store; some use the `persis
 | `learningHistory.store` | Recently visited lessons |
 | `category.store` | Image-library categories |
 | `cloudinary.store` | Image upload / library state |
-| `canvas.store` | Canvas-related UI state |
+| `canvas.store` | Canvas-related UI state + `agentSettings` for publish modal (Tier 1.B) |
+| `tutorPersonality.store` | Student tutor preset id (**persisted** as `tutor-personality-storage`); auto-attached on every `/chat/tutor` call |
 | `language.store` | UI language (Thai / English) |
 | `theme.store` | Light / dark theme |
 | `status.store` | System-status page data |
@@ -158,6 +159,7 @@ Each `*Node.ts` defines the TipTap node (schema/attrs); each `*View.tsx` is its 
 `editor/extensions/tutorApi.ts` is the **single bridge** from every AI surface to the server's unified `POST /api/chat/tutor` (rewired in Tier 0 Phase 0.A, 2026-07-10 — the legacy `/chat/ask|feedback|write-evaluate` endpoints and `questionFeedbackApi.ts` are gone):
 
 - `callTutor({ contentId, blockId, mode, message, ... })` → `POST /chat/tutor`. Returns `{ reply, suggestions, sessionId }`; throws `AiUnavailableError` on axios error or empty reply (callers show `AiErrorRetry`, never fake replies).
+- `callTutorStream(req, { onToken })` — same contract via SSE; falls back to `callTutor` if the server returns JSON or `fetch` fails **before any token** (never falls back mid-stream). Both attach `personality` from `tutorPersonality.store`.
 - Modes per surface: first submit on choice/blank-choice cards → `question_feedback` (client still computes the deterministic level via `questionEvaluation.ts` and passes it in `questionContext.evaluation` + per-choice/per-blank `diagnostics`); blank-write cards → `question_feedback` with `level: "ai_judge"`; write cards → `write_evaluation`; the follow-up thread on any card → `followup` (plain conversation turn, **no evaluation payload** — this is what lets "สวัสดี" be small talk); Ask-AI modal + `QuestionAgentNode` → `free_chat`.
 - `feedbackThreadToClientThread(...)` / `qaHistoryToClientThread(...)` map the locally stored thread shapes (role `"ai"` client-side) to the tutor contract (role `"tutor"`), prepending the original answer + first feedback so **anonymous** users keep context. Logged-in users get server-side `ChatSession` history instead (the server ignores `clientThread` for them).
 - `contentId` comes from `useCanvasStore((s) => s.contentId)`; the Ask-AI modal uses the pseudo-block id `"__lesson_ai_assistant__"`. The modal also sends a trimmed reading-position hint as `currentSection` (from `getQuestionAgentViewportContext`, the only survivor in `questionAgentContext.ts`).

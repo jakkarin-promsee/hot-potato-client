@@ -18,6 +18,10 @@ interface FeedbackDiscussionPanelProps {
   onSend: (message: string) => Promise<void> | void;
   /** Latest tutor reply's follow-up chips; tapping one sends it. */
   suggestions?: string[];
+  /** In-progress streamed tutor text for the current reply. */
+  streamingText?: string;
+  /** Cold-start hint while waiting for first token. */
+  coldStartHint?: boolean;
 }
 
 /**
@@ -33,6 +37,8 @@ export default function FeedbackDiscussionPanel({
   onToggle,
   onSend,
   suggestions = [],
+  streamingText = "",
+  coldStartHint = false,
 }: FeedbackDiscussionPanelProps) {
   const { t } = useEditorI18n();
   const [draft, setDraft] = useState("");
@@ -50,7 +56,7 @@ export default function FeedbackDiscussionPanel({
     const el = listRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
-  }, [messages.length, loading, open]);
+  }, [messages.length, loading, open, streamingText.length]);
 
   const submit = async () => {
     const next = draft.trim();
@@ -98,11 +104,23 @@ export default function FeedbackDiscussionPanel({
                   )}
                 </div>
               ))}
-              {loading && (
+              {loading && streamingText ? (
+                <MarkdownMessage
+                  text={streamingText}
+                  className="max-w-[85%] rounded-2xl rounded-bl-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm"
+                />
+              ) : loading && coldStartHint ? (
+                <p className="text-sm text-gray-400">
+                  {t(
+                    "Waking the AI up, one sec…",
+                    "ปลุก AI แป๊บนึงนะ เซิร์ฟเวอร์เพิ่งตื่น 😴",
+                  )}
+                </p>
+              ) : loading ? (
                 <p className="text-sm text-gray-400">
                   {t("AI is typing...", "AI กำลังพิมพ์...")}
                 </p>
-              )}
+              ) : null}
             </div>
           ) : (
             <p className="text-sm text-gray-400">

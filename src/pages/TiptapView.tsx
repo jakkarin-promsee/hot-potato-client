@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useCanvasStore } from "@/stores/canvas.store";
 import { useAnswerStore } from "@/stores/content-answer.store";
 import { useLearningHistoryStore } from "@/stores/learningHistory.store";
-import { useAuthStore } from "@/stores/auth.store";
+import { useTutorPersonalityStore } from "@/stores/tutorPersonality.store";
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
@@ -17,13 +17,16 @@ function TiptapView() {
   const [isNavVisible, setIsNavVisible] = useState(true);
   const lastWindowScrollYRef = useRef(0);
 
+  const hydratePersonality = useTutorPersonalityStore((s) => s.hydrateFromServer);
+
   useEffect(() => {
     if (!id) return;
     void loadContent(id);
+    void hydratePersonality();
     if (!token) return;
     loadAnswers(id);
     void recordVisit(id);
-  }, [id, token, loadContent, loadAnswers, recordVisit]);
+  }, [id, token, loadContent, loadAnswers, recordVisit, hydratePersonality]);
 
   // 30s auto sync (signed-in only)
   useEffect(() => {

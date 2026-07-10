@@ -7,14 +7,16 @@ import { useAnswerStore } from "@/stores/content-answer.store";
 import { useAuthStore } from "@/stores/auth.store";
 import { Bot, Pencil, SendHorizontal, X } from "lucide-react";
 import { getQuestionAgentViewportContext } from "./extensions/questionAgentContext";
+import { useColdStartHint } from "@/hooks/useColdStartHint";
 import {
   AiUnavailableError,
-  callTutor,
+  callTutorStream,
   qaHistoryToClientThread,
 } from "./extensions/tutorApi";
 import AiErrorRetry from "./extensions/AiErrorRetry";
 import MarkdownMessage from "./extensions/MarkdownMessage";
 import SuggestionChips from "./extensions/SuggestionChips";
+import PersonalityPicker from "./extensions/PersonalityPicker";
 
 const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 4.0;
@@ -92,6 +94,8 @@ function TiptapViewer({ onScrollDirectionChange }: TiptapViewerProps) {
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [questionInput, setQuestionInput] = useState("");
   const [isAsking, setIsAsking] = useState(false);
+  const [streamingText, setStreamingText] = useState("");
+  const showColdStart = useColdStartHint(isAsking && !streamingText);
   const [askError, setAskError] = useState(false);
   const [isConfirmClear, setIsConfirmClear] = useState(false);
 
@@ -221,20 +225,24 @@ function TiptapViewer({ onScrollDirectionChange }: TiptapViewerProps) {
 
     setIsAsking(true);
     setAskError(false);
+    setStreamingText("");
     try {
       const viewportContext = mainRef.current
         ? getQuestionAgentViewportContext(mainRef.current)
         : "";
-      const { reply, suggestions } = await callTutor({
-        contentId: contentId ?? "",
-        blockId: LESSON_AI_BLOCK_ID,
-        mode: "free_chat",
-        message: question,
-        clientThread: qaHistoryToClientThread(chatHistory),
-        currentSection: viewportContext
-          ? viewportContext.slice(0, CURRENT_SECTION_MAX_CHARS)
-          : undefined,
-      });
+      const { reply, suggestions } = await callTutorStream(
+        {
+          contentId: contentId ?? "",
+          blockId: LESSON_AI_BLOCK_ID,
+          mode: "free_chat",
+          message: question,
+          clientThread: qaHistoryToClientThread(chatHistory),
+          currentSection: viewportContext
+            ? viewportContext.slice(0, CURRENT_SECTION_MAX_CHARS)
+            : undefined,
+        },
+        { onToken: (t) => setStreamingText((prev) => prev + t) },
+      );
       const nextHistory = [
         ...chatHistory,
         { question, answer: reply, createdAt: new Date().toISOString() },
@@ -255,6 +263,7 @@ function TiptapViewer({ onScrollDirectionChange }: TiptapViewerProps) {
       }
     } finally {
       setIsAsking(false);
+      setStreamingText("");
     }
   };
 
@@ -308,7 +317,7 @@ function TiptapViewer({ onScrollDirectionChange }: TiptapViewerProps) {
     const el = aiChatListRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
-  }, [chatHistory.length, isAsking, isAiOpen]);
+  }, [chatHistory.length, isAsking, isAiOpen, streamingText.length]);
 
   return (
     <div className="editor-layout editor-layout--viewer">
@@ -382,6 +391,10 @@ function TiptapViewer({ onScrollDirectionChange }: TiptapViewerProps) {
               </button>
             </div>
 
+            <div className="border-b border-border px-4 py-3">
+              <PersonalityPicker />
+            </div>
+
             <div
               ref={aiChatListRef}
               className="flex-1 space-y-2 overflow-y-auto px-4 py-3"
@@ -408,9 +421,20 @@ function TiptapViewer({ onScrollDirectionChange }: TiptapViewerProps) {
                   </div>
                 ))
               )}
-              {isAsking && (
+              {isAsking && streamingText ? (
+                <div className="flex justify-start">
+                  <MarkdownMessage
+                    text={streamingText}
+                    className="max-w-[90%] rounded-2xl rounded-bl-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800"
+                  />
+                </div>
+              ) : isAsking && showColdStart ? (
+                <p className="text-sm text-muted-foreground">
+                  ปลุก AI แป๊บนึงนะ เซิร์ฟเวอร์เพิ่งตื่น 😴
+                </p>
+              ) : isAsking ? (
                 <p className="text-sm text-muted-foreground">AI กำลังพิมพ์...</p>
-              )}
+              ) : null}
               {askError && (
                 <AiErrorRetry
                   onRetry={() => void handleAsk()}

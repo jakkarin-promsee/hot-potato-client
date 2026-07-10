@@ -14,9 +14,10 @@ import FeedbackDiscussionPanel, {
 } from "./FeedbackDiscussionPanel";
 import QuestionFeedbackModeToggle from "./QuestionFeedbackModeToggle";
 import type { QuestionFeedbackMode } from "./questionMode";
+import { useColdStartHint } from "@/hooks/useColdStartHint";
 import {
   AiUnavailableError,
-  callTutor,
+  callTutorStream,
   feedbackThreadToClientThread,
 } from "./tutorApi";
 import AiErrorRetry from "./AiErrorRetry";
@@ -151,6 +152,14 @@ function ViewerView({ attrs }: ViewerViewProps) {
   );
   const [isThreadLoading, setIsThreadLoading] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
+  const [feedbackStreamingText, setFeedbackStreamingText] = useState("");
+  const [threadStreamingText, setThreadStreamingText] = useState("");
+  const showFeedbackColdStart = useColdStartHint(
+    isEvaluating && !feedbackStreamingText,
+  );
+  const showThreadColdStart = useColdStartHint(
+    isThreadLoading && !threadStreamingText,
+  );
   const [aiError, setAiError] = useState(false);
   const [threadAiError, setThreadAiError] = useState(false);
   const [threadRetryMessage, setThreadRetryMessage] = useState("");
@@ -209,18 +218,22 @@ function ViewerView({ attrs }: ViewerViewProps) {
     });
 
     setIsEvaluating(true);
+    setFeedbackStreamingText("");
     try {
-      const { reply, suggestions: nextSuggestions } = await callTutor({
-        contentId: contentId ?? "",
-        blockId,
-        mode: "write_evaluation",
-        message: input,
-        questionContext: {
-          question: question || "Writing question",
-          guideAnswer: answer,
-          feedbackMode,
+      const { reply, suggestions: nextSuggestions } = await callTutorStream(
+        {
+          contentId: contentId ?? "",
+          blockId,
+          mode: "write_evaluation",
+          message: input,
+          questionContext: {
+            question: question || "Writing question",
+            guideAnswer: answer,
+            feedbackMode,
+          },
         },
-      });
+        { onToken: (t) => setFeedbackStreamingText((prev) => prev + t) },
+      );
       setAiFeedback(reply);
       setSuggestions(nextSuggestions);
       persistAnswer({
@@ -237,6 +250,7 @@ function ViewerView({ attrs }: ViewerViewProps) {
       }
     } finally {
       setIsEvaluating(false);
+      setFeedbackStreamingText("");
     }
   };
 
@@ -271,18 +285,22 @@ function ViewerView({ attrs }: ViewerViewProps) {
 
       setIsThreadLoading(true);
       setThreadAiError(false);
+      setThreadStreamingText("");
       try {
-        const { reply, suggestions: nextSuggestions } = await callTutor({
-          contentId: contentId ?? "",
-          blockId,
-          mode: "followup",
-          message,
-          clientThread: feedbackThreadToClientThread({
-            originalAnswer: input,
-            initialFeedback: aiFeedback,
-            thread: feedbackThread,
-          }),
-        });
+        const { reply, suggestions: nextSuggestions } = await callTutorStream(
+          {
+            contentId: contentId ?? "",
+            blockId,
+            mode: "followup",
+            message,
+            clientThread: feedbackThreadToClientThread({
+              originalAnswer: input,
+              initialFeedback: aiFeedback,
+              thread: feedbackThread,
+            }),
+          },
+          { onToken: (t) => setThreadStreamingText((prev) => prev + t) },
+        );
         const aiMessage: FeedbackThreadMessage = {
           role: "ai",
           text: reply,
@@ -307,6 +325,7 @@ function ViewerView({ attrs }: ViewerViewProps) {
         }
       } finally {
         setIsThreadLoading(false);
+        setThreadStreamingText("");
       }
     },
     [aiFeedback, blockId, contentId, feedbackThread, input, persistAnswer],
@@ -384,6 +403,18 @@ function ViewerView({ attrs }: ViewerViewProps) {
                 loading={isEvaluating}
               />
             </div>
+          ) : isEvaluating && feedbackStreamingText ? (
+            <MarkdownMessage
+              text={feedbackStreamingText}
+              className="mt-1 text-base text-violet-900"
+            />
+          ) : isEvaluating && showFeedbackColdStart ? (
+            <p className="mt-1 text-base text-violet-900">
+              {t(
+                "Waking the AI up, one sec…",
+                "ปลุก AI แป๊บนึงนะ เซิร์ฟเวอร์เพิ่งตื่น 😴",
+              )}
+            </p>
           ) : isEvaluating ? (
             <p className="mt-1 text-base text-violet-900">
               {t("AI is deeply evaluating your answer...", "AI กำลังวิเคราะห์คำตอบแบบละเอียด...")}
@@ -415,6 +446,8 @@ function ViewerView({ attrs }: ViewerViewProps) {
           messages={feedbackThread}
           open={threadOpen}
           loading={isThreadLoading}
+          streamingText={threadStreamingText}
+          coldStartHint={showThreadColdStart}
           suggestions={suggestions}
           onToggle={() => {
             const next = !threadOpen;

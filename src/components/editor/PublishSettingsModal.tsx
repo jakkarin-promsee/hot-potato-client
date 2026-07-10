@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import api from "@/lib/axios";
-import { useCanvasStore } from "@/stores/canvas.store";
+import { useCanvasStore, type AgentSettings } from "@/stores/canvas.store";
 import { useUploadStore } from "@/stores/cloudinary.store";
 import { useEditorI18n } from "./editor.i18n";
 
@@ -152,6 +152,7 @@ function PublishSettingsModal({ open, onClose }: PublishSettingsModalProps) {
   const accessType = useCanvasStore((s) => s.accessType);
   const topics = useCanvasStore((s) => s.topics);
   const description = useCanvasStore((s) => s.description);
+  const agentSettings = useCanvasStore((s) => s.agentSettings);
   const isSaving = useCanvasStore((s) => s.isSaving);
   const setTitle = useCanvasStore((s) => s.setTitle);
   const setTitleImage = useCanvasStore((s) => s.setTitleImage);
@@ -159,6 +160,7 @@ function PublishSettingsModal({ open, onClose }: PublishSettingsModalProps) {
   const setAccessType = useCanvasStore((s) => s.setAccessType);
   const setTopics = useCanvasStore((s) => s.setTopics);
   const setDescription = useCanvasStore((s) => s.setDescription);
+  const setAgentSettings = useCanvasStore((s) => s.setAgentSettings);
   const saveContent = useCanvasStore((s) => s.saveContent);
   const forceSave = useCanvasStore((s) => s.forceSave);
   const upload = useUploadStore((s) => s.upload);
@@ -476,6 +478,131 @@ function PublishSettingsModal({ open, onClose }: PublishSettingsModalProps) {
               )}
               className="min-h-24"
             />
+          </div>
+
+          <div className="space-y-4 md:col-span-2">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">
+                {t("AI Tutor", "AI ติวเตอร์")}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {t(
+                  "Shape how the AI tutor behaves in this lesson. Leave blank to use the friendly default.",
+                  "ปรับพฤติกรรม AI ติวเตอร์ของบทเรียนนี้ เว้นว่างไว้เพื่อใช้ค่าเริ่มต้นที่เป็นมิตร",
+                )}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>
+                {t("Tutor personality (optional)", "บุคลิกของติวเตอร์ (ไม่บังคับ)")}
+              </Label>
+              <Input
+                value={agentSettings.persona_note}
+                maxLength={500}
+                onChange={(e) =>
+                  setAgentSettings({
+                    ...agentSettings,
+                    persona_note: e.target.value,
+                  })
+                }
+                placeholder={t(
+                  'e.g. "Talk like a sports coach"',
+                  'เช่น "พูดเหมือนโค้ชกีฬา"',
+                )}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t("Answer style", "สไตล์การให้คำตอบ")}</Label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant={!agentSettings.allow_direct_answers ? "default" : "outline"}
+                  size="sm"
+                  onClick={() =>
+                    setAgentSettings({
+                      ...agentSettings,
+                      allow_direct_answers: false,
+                    })
+                  }
+                >
+                  {t("Coach first (recommended)", "ชวนคิดก่อน (แนะนำ)")}
+                </Button>
+                <Button
+                  type="button"
+                  variant={agentSettings.allow_direct_answers ? "default" : "outline"}
+                  size="sm"
+                  onClick={() =>
+                    setAgentSettings({
+                      ...agentSettings,
+                      allow_direct_answers: true,
+                    })
+                  }
+                >
+                  {t("May answer directly", "บอกคำตอบตรงๆ ได้")}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t(
+                  "Coach first: the AI guides with hints before revealing answers.",
+                  "ชวนคิดก่อน: AI จะใบ้และชวนคิดก่อนเฉลย",
+                )}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t("Chat scope", "ขอบเขตการคุย")}</Label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant={
+                    agentSettings.scope === "lesson_plus_general" ? "default" : "outline"
+                  }
+                  size="sm"
+                  onClick={() =>
+                    setAgentSettings({
+                      ...agentSettings,
+                      scope: "lesson_plus_general",
+                    })
+                  }
+                >
+                  {t("Lesson + general knowledge", "บทเรียน + ความรู้ทั่วไป")}
+                </Button>
+                <Button
+                  type="button"
+                  variant={
+                    agentSettings.scope === "lesson_only" ? "default" : "outline"
+                  }
+                  size="sm"
+                  onClick={() =>
+                    setAgentSettings({
+                      ...agentSettings,
+                      scope: "lesson_only",
+                    })
+                  }
+                >
+                  {t("This lesson only", "เฉพาะบทเรียนนี้")}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>
+                {t("Extra guidance for the AI (optional)", "แนวทางเพิ่มเติมให้ AI (ไม่บังคับ)")}
+              </Label>
+              <Textarea
+                value={agentSettings.custom_guidelines}
+                maxLength={1000}
+                onChange={(e) =>
+                  setAgentSettings({
+                    ...agentSettings,
+                    custom_guidelines: e.target.value,
+                  } satisfies AgentSettings)
+                }
+                className="min-h-20"
+              />
+            </div>
           </div>
 
           <div className="rounded-lg border border-border/70 bg-muted/20 p-3 md:col-span-2">

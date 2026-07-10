@@ -12,9 +12,10 @@ import {
   ChevronUp,
 } from "lucide-react";
 import type { QuestionAgentAttrs } from "./QuestionAgentNode";
+import { useColdStartHint } from "@/hooks/useColdStartHint";
 import {
   AiUnavailableError,
-  callTutor,
+  callTutorStream,
   qaHistoryToClientThread,
 } from "./tutorApi";
 import AiErrorRetry from "./AiErrorRetry";
@@ -83,6 +84,8 @@ export default function QuestionAgentView({
   );
   const [questionInput, setQuestionInput] = useState("");
   const [isAsking, setIsAsking] = useState(false);
+  const [streamingText, setStreamingText] = useState("");
+  const showColdStart = useColdStartHint(isAsking && !streamingText);
   const [aiError, setAiError] = useState(false);
   const inputRef = useAutoGrow(questionInput);
   const hasAsked = chatHistory.length > 0;
@@ -120,14 +123,18 @@ export default function QuestionAgentView({
 
     setIsAsking(true);
     setAiError(false);
+    setStreamingText("");
     try {
-      const { reply, suggestions: nextSuggestions } = await callTutor({
-        contentId: contentId ?? "",
-        blockId,
-        mode: "free_chat",
-        message: question,
-        clientThread: qaHistoryToClientThread(chatHistory),
-      });
+      const { reply, suggestions: nextSuggestions } = await callTutorStream(
+        {
+          contentId: contentId ?? "",
+          blockId,
+          mode: "free_chat",
+          message: question,
+          clientThread: qaHistoryToClientThread(chatHistory),
+        },
+        { onToken: (t) => setStreamingText((prev) => prev + t) },
+      );
       const nextHistory = [
         ...chatHistory,
         { question, answer: reply, createdAt: new Date().toISOString() },
@@ -148,6 +155,7 @@ export default function QuestionAgentView({
       }
     } finally {
       setIsAsking(false);
+      setStreamingText("");
     }
   };
 
@@ -258,11 +266,25 @@ export default function QuestionAgentView({
                   </div>
                 </div>
               ))}
-              {isAsking && (
+              {isAsking && streamingText ? (
+                <div className="flex justify-start">
+                  <MarkdownMessage
+                    text={streamingText}
+                    className="max-w-[85%] rounded-2xl rounded-bl-md border border-gray-200 bg-gray-50 px-3 py-2 text-base text-gray-800 shadow-sm"
+                  />
+                </div>
+              ) : isAsking && showColdStart ? (
+                <p className="text-sm text-gray-400">
+                  {t(
+                    "Waking the AI up, one sec…",
+                    "ปลุก AI แป๊บนึงนะ เซิร์ฟเวอร์เพิ่งตื่น 😴",
+                  )}
+                </p>
+              ) : isAsking ? (
                 <p className="text-sm text-gray-400">
                   {t("AI is typing...", "AI กำลังพิมพ์...")}
                 </p>
-              )}
+              ) : null}
             </div>
 
             {!isAsking && (

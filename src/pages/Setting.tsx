@@ -12,7 +12,8 @@ import { useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useThemeStore } from "@/stores/theme.store";
 import { useAuthStore } from "@/stores/auth.store";
-import { useLanguageStore } from "@/stores/language.store";
+import PersonalityPicker from "@/components/editor/extensions/PersonalityPicker";
+import { useTutorPersonalityStore } from "@/stores/tutorPersonality.store";
 
 interface SettingRow {
   icon: React.ElementType;
@@ -151,6 +152,24 @@ export default function Settings() {
                 {t("Thai", "ไทย")}
               </button>
             </div>
+          </div>
+        </div>
+
+        <div>
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {t("AI Tutor", "AI ติวเตอร์")}
+          </h2>
+          <div className="rounded-lg border border-border bg-card px-4 py-3">
+            <p className="text-sm font-medium text-foreground">
+              {t("Choose how the tutor talks to you", "เลือกสไตล์การคุยของติวเตอร์")}
+            </p>
+            <p className="mb-3 text-xs text-muted-foreground">
+              {t(
+                "Applies to every AI chat in lessons.",
+                "มีผลกับการคุย AI ทุกจุดในบทเรียน",
+              )}
+            </p>
+            <PersonalityPicker />
           </div>
         </div>
 

@@ -5,7 +5,13 @@ const { mockPost } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/axios", () => ({
-  default: { post: mockPost },
+  default: { post: mockPost, get: vi.fn() },
+}));
+
+vi.mock("@/stores/tutorPersonality.store", () => ({
+  useTutorPersonalityStore: {
+    getState: () => ({ personality: "default" }),
+  },
 }));
 
 import {
@@ -37,7 +43,10 @@ describe("callTutor", () => {
       },
     });
     const result = await callTutor(baseRequest);
-    expect(mockPost).toHaveBeenCalledWith("/chat/tutor", baseRequest);
+    expect(mockPost).toHaveBeenCalledWith("/chat/tutor", {
+      ...baseRequest,
+      personality: "default",
+    });
     expect(result).toEqual({
       reply: "หวัดดี!",
       suggestions: ["ถามต่อ 1", "ถามต่อ 2"],

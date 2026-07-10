@@ -7,9 +7,10 @@ import FeedbackDiscussionPanel, {
   type FeedbackThreadMessage,
 } from "./FeedbackDiscussionPanel";
 import QuestionFeedbackModeToggle from "./QuestionFeedbackModeToggle";
+import { useColdStartHint } from "@/hooks/useColdStartHint";
 import {
   AiUnavailableError,
-  callTutor,
+  callTutorStream,
   feedbackThreadToClientThread,
 } from "./tutorApi";
 import AiErrorRetry from "./AiErrorRetry";
@@ -333,6 +334,14 @@ function ViewerView({ attrs }: { attrs: QuestionBlankChoiceAttrs }) {
   );
   const [isThreadLoading, setIsThreadLoading] = useState(false);
   const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
+  const [feedbackStreamingText, setFeedbackStreamingText] = useState("");
+  const [threadStreamingText, setThreadStreamingText] = useState("");
+  const showFeedbackColdStart = useColdStartHint(
+    isFeedbackLoading && !feedbackStreamingText,
+  );
+  const showThreadColdStart = useColdStartHint(
+    isThreadLoading && !threadStreamingText,
+  );
   const [aiError, setAiError] = useState(false);
   const [threadAiError, setThreadAiError] = useState(false);
   const [threadRetryMessage, setThreadRetryMessage] = useState("");
@@ -425,6 +434,7 @@ function ViewerView({ attrs }: { attrs: QuestionBlankChoiceAttrs }) {
     });
 
     setIsFeedbackLoading(true);
+    setFeedbackStreamingText("");
     try {
       const totalBlanks = blankIndices.length;
       const matchedCount = placedByBlank.filter(
@@ -465,22 +475,25 @@ function ViewerView({ attrs }: { attrs: QuestionBlankChoiceAttrs }) {
         .filter(Boolean)
         .join(" ; ");
 
-      const { reply, suggestions: nextSuggestions } = await callTutor({
-        contentId: contentId ?? "",
-        blockId,
-        mode: "question_feedback",
-        message: userAnswer || "(ไม่ได้เลือกคำตอบ)",
-        questionContext: {
-          question: template || "Fill blank choice question",
-          guideAnswer: correctAnswer,
-          evaluation: {
-            level: evaluationLevel,
-            accuracyPercent,
-            diagnostics,
+      const { reply, suggestions: nextSuggestions } = await callTutorStream(
+        {
+          contentId: contentId ?? "",
+          blockId,
+          mode: "question_feedback",
+          message: userAnswer || "(ไม่ได้เลือกคำตอบ)",
+          questionContext: {
+            question: template || "Fill blank choice question",
+            guideAnswer: correctAnswer,
+            evaluation: {
+              level: evaluationLevel,
+              accuracyPercent,
+              diagnostics,
+            },
+            feedbackMode,
           },
-          feedbackMode,
         },
-      });
+        { onToken: (t) => setFeedbackStreamingText((prev) => prev + t) },
+      );
       setAiFeedback(reply);
       setSuggestions(nextSuggestions);
       persistAnswer({
@@ -497,6 +510,7 @@ function ViewerView({ attrs }: { attrs: QuestionBlankChoiceAttrs }) {
       }
     } finally {
       setIsFeedbackLoading(false);
+      setFeedbackStreamingText("");
     }
   };
 
@@ -540,18 +554,22 @@ function ViewerView({ attrs }: { attrs: QuestionBlankChoiceAttrs }) {
 
       setIsThreadLoading(true);
       setThreadAiError(false);
+      setThreadStreamingText("");
       try {
-        const { reply, suggestions: nextSuggestions } = await callTutor({
-          contentId: contentId ?? "",
-          blockId,
-          mode: "followup",
-          message,
-          clientThread: feedbackThreadToClientThread({
-            originalAnswer: userAnswer,
-            initialFeedback: aiFeedback,
-            thread: feedbackThread,
-          }),
-        });
+        const { reply, suggestions: nextSuggestions } = await callTutorStream(
+          {
+            contentId: contentId ?? "",
+            blockId,
+            mode: "followup",
+            message,
+            clientThread: feedbackThreadToClientThread({
+              originalAnswer: userAnswer,
+              initialFeedback: aiFeedback,
+              thread: feedbackThread,
+            }),
+          },
+          { onToken: (t) => setThreadStreamingText((prev) => prev + t) },
+        );
         const aiMessage: FeedbackThreadMessage = {
           role: "ai",
           text: reply,
@@ -576,6 +594,7 @@ function ViewerView({ attrs }: { attrs: QuestionBlankChoiceAttrs }) {
         }
       } finally {
         setIsThreadLoading(false);
+        setThreadStreamingText("");
       }
     },
     [
@@ -731,6 +750,18 @@ function ViewerView({ attrs }: { attrs: QuestionBlankChoiceAttrs }) {
                 loading={isFeedbackLoading}
               />
             </div>
+          ) : isFeedbackLoading && feedbackStreamingText ? (
+            <MarkdownMessage
+              text={feedbackStreamingText}
+              className="mt-1 text-base text-violet-900"
+            />
+          ) : isFeedbackLoading && showFeedbackColdStart ? (
+            <p className="mt-1 text-base text-violet-900">
+              {t(
+                "Waking the AI up, one sec…",
+                "ปลุก AI แป๊บนึงนะ เซิร์ฟเวอร์เพิ่งตื่น 😴",
+              )}
+            </p>
           ) : isFeedbackLoading ? (
             <p className="mt-1 text-base text-violet-900">
               {t("AI is generating detailed feedback...", "AI กำลังเขียนคำแนะนำแบบละเอียดให้...")}
@@ -762,6 +793,8 @@ function ViewerView({ attrs }: { attrs: QuestionBlankChoiceAttrs }) {
           messages={feedbackThread}
           open={threadOpen}
           loading={isThreadLoading}
+          streamingText={threadStreamingText}
+          coldStartHint={showThreadColdStart}
           suggestions={suggestions}
           onToggle={() => {
             const next = !threadOpen;
