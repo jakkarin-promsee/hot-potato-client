@@ -14,9 +14,11 @@ import FeedbackDiscussionPanel, {
 import QuestionFeedbackModeToggle from "./QuestionFeedbackModeToggle";
 import type { QuestionFeedbackMode } from "./questionMode";
 import {
+  AiUnavailableError,
   requestFeedbackFollowup,
   requestWriteEvaluation,
 } from "./questionFeedbackApi";
+import AiErrorRetry from "./AiErrorRetry";
 import BlockMoveControls from "./BlockMoveControls";
 import { useEditorI18n } from "../editor.i18n";
 
@@ -141,6 +143,9 @@ function ViewerView({ attrs }: ViewerViewProps) {
   );
   const [isThreadLoading, setIsThreadLoading] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
+  const [aiError, setAiError] = useState(false);
+  const [threadAiError, setThreadAiError] = useState(false);
+  const [threadRetryMessage, setThreadRetryMessage] = useState("");
   const inputRef = useAutoGrow(input);
 
   const persistAnswer = useCallback(
@@ -171,6 +176,7 @@ function ViewerView({ attrs }: ViewerViewProps) {
   const handleSubmit = async () => {
     setSubmitted(true);
     setAiFeedback("");
+    setAiError(false);
     setFeedbackThread([]);
     setThreadOpen(false);
     persistAnswer({
@@ -197,6 +203,10 @@ function ViewerView({ attrs }: ViewerViewProps) {
         feedbackThread: [],
         threadOpen: false,
       });
+    } catch (error) {
+      if (error instanceof AiUnavailableError) {
+        setAiError(true);
+      }
     } finally {
       setIsEvaluating(false);
     }
@@ -230,6 +240,7 @@ function ViewerView({ attrs }: ViewerViewProps) {
       persistAnswer({ feedbackThread: threadWithStudent, threadOpen: true });
 
       setIsThreadLoading(true);
+      setThreadAiError(false);
       try {
         const aiReply = await requestFeedbackFollowup({
           topic: question || "Writing question",
@@ -250,7 +261,16 @@ function ViewerView({ attrs }: ViewerViewProps) {
         };
         const nextThread = [...threadWithStudent, aiMessage];
         setFeedbackThread(nextThread);
+        setThreadAiError(false);
+        setThreadRetryMessage("");
         persistAnswer({ feedbackThread: nextThread, threadOpen: true });
+      } catch (error) {
+        if (error instanceof AiUnavailableError) {
+          setThreadAiError(true);
+          setThreadRetryMessage(message);
+          setFeedbackThread(feedbackThread);
+          persistAnswer({ feedbackThread, threadOpen: true });
+        }
       } finally {
         setIsThreadLoading(false);
       }
@@ -321,11 +341,20 @@ function ViewerView({ attrs }: ViewerViewProps) {
           <p className="text-xs font-semibold uppercase tracking-wide text-violet-600">
             {t("AI deep evaluation", "การประเมินเชิงลึกจาก AI")}
           </p>
-          <p className="mt-1 whitespace-pre-wrap text-base text-violet-900">
-            {isEvaluating
-              ? t("AI is deeply evaluating your answer...", "AI กำลังวิเคราะห์คำตอบแบบละเอียด...")
-              : aiFeedback || t("No evaluation yet", "ยังไม่มีผลวิเคราะห์")}
-          </p>
+          {aiError ? (
+            <div className="mt-1">
+              <AiErrorRetry
+                onRetry={() => void handleSubmit()}
+                loading={isEvaluating}
+              />
+            </div>
+          ) : (
+            <p className="mt-1 whitespace-pre-wrap text-base text-violet-900">
+              {isEvaluating
+                ? t("AI is deeply evaluating your answer...", "AI กำลังวิเคราะห์คำตอบแบบละเอียด...")
+                : aiFeedback || t("No evaluation yet", "ยังไม่มีผลวิเคราะห์")}
+            </p>
+          )}
         </div>
       )}
       {submitted && aiFeedback && (
@@ -339,6 +368,16 @@ function ViewerView({ attrs }: ViewerViewProps) {
             persistAnswer({ threadOpen: next });
           }}
           onSend={handleSendThreadMessage}
+        />
+      )}
+      {submitted && aiFeedback && threadAiError && (
+        <AiErrorRetry
+          onRetry={() => {
+            if (threadRetryMessage) {
+              void handleSendThreadMessage(threadRetryMessage);
+            }
+          }}
+          loading={isThreadLoading}
         />
       )}
     </div>

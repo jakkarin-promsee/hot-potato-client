@@ -7,9 +7,11 @@ import FeedbackDiscussionPanel, {
 } from "./FeedbackDiscussionPanel";
 import QuestionFeedbackModeToggle from "./QuestionFeedbackModeToggle";
 import {
+  AiUnavailableError,
   requestFeedbackFollowup,
   requestQuestionFeedback,
 } from "./questionFeedbackApi";
+import AiErrorRetry from "./AiErrorRetry";
 import type { QuestionFeedbackMode } from "./questionMode";
 import { Eye, EyeOff, HelpCircle, SquareDashedMousePointer } from "lucide-react";
 import type { QuestionBlankWriteAttrs } from "./QuestionBlankWriteNode";
@@ -335,6 +337,9 @@ function ViewerView({ attrs }: { attrs: QuestionBlankWriteAttrs }) {
   const [threadOpen, setThreadOpen] = useState(saved?.threadOpen ?? false);
   const [isThreadLoading, setIsThreadLoading] = useState(false);
   const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
+  const [aiError, setAiError] = useState(false);
+  const [threadAiError, setThreadAiError] = useState(false);
+  const [threadRetryMessage, setThreadRetryMessage] = useState("");
 
   const persistAnswer = useCallback(
     (next: Partial<BlockAnswer>) => {
@@ -379,6 +384,7 @@ function ViewerView({ attrs }: { attrs: QuestionBlankWriteAttrs }) {
   const handleSubmit = async () => {
     setSubmitted(true);
     setAiFeedback("");
+    setAiError(false);
     setFeedbackThread([]);
     setThreadOpen(false);
     persistAnswer({
@@ -416,6 +422,10 @@ function ViewerView({ attrs }: { attrs: QuestionBlankWriteAttrs }) {
         feedbackThread: [],
         threadOpen: false,
       });
+    } catch (error) {
+      if (error instanceof AiUnavailableError) {
+        setAiError(true);
+      }
     } finally {
       setIsFeedbackLoading(false);
     }
@@ -462,6 +472,7 @@ function ViewerView({ attrs }: { attrs: QuestionBlankWriteAttrs }) {
         .join(" | ");
 
       setIsThreadLoading(true);
+      setThreadAiError(false);
       try {
         const aiReply = await requestFeedbackFollowup({
           topic: template || "Fill blank write question",
@@ -482,7 +493,16 @@ function ViewerView({ attrs }: { attrs: QuestionBlankWriteAttrs }) {
         };
         const nextThread = [...threadWithStudent, aiMessage];
         setFeedbackThread(nextThread);
+        setThreadAiError(false);
+        setThreadRetryMessage("");
         persistAnswer({ feedbackThread: nextThread, threadOpen: true });
+      } catch (error) {
+        if (error instanceof AiUnavailableError) {
+          setThreadAiError(true);
+          setThreadRetryMessage(message);
+          setFeedbackThread(feedbackThread);
+          persistAnswer({ feedbackThread, threadOpen: true });
+        }
       } finally {
         setIsThreadLoading(false);
       }
@@ -560,11 +580,20 @@ function ViewerView({ attrs }: { attrs: QuestionBlankWriteAttrs }) {
           <p className="text-xs font-semibold uppercase tracking-wide text-violet-500">
             {t("AI feedback", "คำแนะนำจาก AI")}
           </p>
-          <p className="mt-1 text-base text-violet-900">
-            {isFeedbackLoading
-              ? t("AI is generating detailed feedback...", "AI กำลังเขียนคำแนะนำแบบละเอียดให้...")
-              : aiFeedback || t("No feedback yet", "ยังไม่มีคำแนะนำ")}
-          </p>
+          {aiError ? (
+            <div className="mt-1">
+              <AiErrorRetry
+                onRetry={() => void handleSubmit()}
+                loading={isFeedbackLoading}
+              />
+            </div>
+          ) : (
+            <p className="mt-1 text-base text-violet-900">
+              {isFeedbackLoading
+                ? t("AI is generating detailed feedback...", "AI กำลังเขียนคำแนะนำแบบละเอียดให้...")
+                : aiFeedback || t("No feedback yet", "ยังไม่มีคำแนะนำ")}
+            </p>
+          )}
         </div>
       )}
       {submitted && aiFeedback && (
@@ -578,6 +607,16 @@ function ViewerView({ attrs }: { attrs: QuestionBlankWriteAttrs }) {
             persistAnswer({ threadOpen: next });
           }}
           onSend={handleSendThreadMessage}
+        />
+      )}
+      {submitted && aiFeedback && threadAiError && (
+        <AiErrorRetry
+          onRetry={() => {
+            if (threadRetryMessage) {
+              void handleSendThreadMessage(threadRetryMessage);
+            }
+          }}
+          loading={isThreadLoading}
         />
       )}
     </div>

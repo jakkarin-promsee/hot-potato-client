@@ -1,6 +1,13 @@
 import api from "@/lib/axios";
 import type { QuestionFeedbackMode } from "./questionMode";
 
+export class AiUnavailableError extends Error {
+  constructor() {
+    super("AI unavailable");
+    this.name = "AiUnavailableError";
+  }
+}
+
 export interface FeedbackRequestPayload {
   question: string;
   correctAnswer: string;
@@ -33,11 +40,6 @@ export interface FeedbackFollowupPayload {
   feedbackMode?: QuestionFeedbackMode;
 }
 
-const FALLBACK_FEEDBACK =
-  "ขอบคุณที่พยายามตอบนะ ลองดูส่วนที่พลาดทีละจุด แล้วค่อยลองใหม่อีกครั้ง เดี๋ยวจะดีขึ้นแน่นอน";
-const FALLBACK_WRITE_EVALUATION =
-  "คำตอบนี้มีแนวคิดที่น่าสนใจแล้วนะ ลองขยายเหตุผลให้ชัดขึ้นอีกนิด โดยอธิบายว่าแต่ละประเด็นเชื่อมกับคำถามอย่างไร แล้วสรุปเป็นคำตอบสุดท้ายอีกครั้ง";
-
 export async function requestQuestionFeedback(
   payload: FeedbackRequestPayload,
 ): Promise<string> {
@@ -47,9 +49,11 @@ export async function requestQuestionFeedback(
       payload,
     );
     const feedback = response.data?.feedback?.trim();
-    return feedback || FALLBACK_FEEDBACK;
-  } catch {
-    return FALLBACK_FEEDBACK;
+    if (!feedback) throw new AiUnavailableError();
+    return feedback;
+  } catch (error) {
+    if (error instanceof AiUnavailableError) throw error;
+    throw new AiUnavailableError();
   }
 }
 
@@ -62,9 +66,11 @@ export async function requestWriteEvaluation(
       payload,
     );
     const feedback = response.data?.feedback?.trim();
-    return feedback || FALLBACK_WRITE_EVALUATION;
-  } catch {
-    return FALLBACK_WRITE_EVALUATION;
+    if (!feedback) throw new AiUnavailableError();
+    return feedback;
+  } catch (error) {
+    if (error instanceof AiUnavailableError) throw error;
+    throw new AiUnavailableError();
   }
 }
 

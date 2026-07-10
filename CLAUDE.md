@@ -160,9 +160,9 @@ Each `*Node.ts` defines the TipTap node (schema/attrs); each `*View.tsx` is its 
 - `requestWriteEvaluation(...)` → `POST /chat/write-evaluate` (open-ended answers).
 - `requestFeedbackFollowup(...)` → builds a follow-up coaching turn on top of `/chat/feedback` (used by `FeedbackDiscussionPanel.tsx` for the back-and-forth thread).
 
-Each call has a **Thai fallback string** if the request fails. Feedback verbosity is controlled by `feedbackMode` (`quick_check` | `full_reflection`, see `questionMode.ts`). The `QuestionAgentNode` free-Q&A uses `/chat/ask` with the lesson as `context` (see `questionAgentContext.ts`).
+Each call throws `AiUnavailableError` on failure (axios error or empty response). Callers show an `AiErrorRetry` inline box with Thai copy instead of fake feedback strings. Feedback verbosity is controlled by `feedbackMode` (`quick_check` | `full_reflection`, see `questionMode.ts`). The `QuestionAgentNode` free-Q&A uses `/chat/ask` with the lesson as `context` (see `questionAgentContext.ts`).
 
-> **⚠️ This whole bridge is being reworked** (roadmap Phases 0 → 5). Two changes land here: **Phase 0.4** replaces the silent Thai fallback strings with an honest `AiUnavailableError` + retry UI (a fallback that *looks like real feedback* is worse than an obvious "try again"). **Phase 5** points all four flows at a single new `POST /api/chat/tutor` endpoint and deletes the `requestFeedbackFollowup` hack (which today fakes a conversation by re-calling `/chat/feedback`). Read [`../ROADMAP-detailed.md`](../ROADMAP-detailed.md) before changing anything in `questionFeedbackApi.ts` or the `Question*View.tsx` files.
+> **⚠️ This whole bridge is being reworked** (roadmap Phases 1 → 5). Phase 0 replaced silent Thai fallback strings with honest `AiUnavailableError` + retry UI. **Phase 5** points all four flows at a single new `POST /api/chat/tutor` endpoint and deletes the `requestFeedbackFollowup` hack (which today fakes a conversation by re-calling `/chat/feedback`). Read [`../ROADMAP-detailed.md`](../ROADMAP-detailed.md) before changing anything in `questionFeedbackApi.ts` or the `Question*View.tsx` files.
 
 ### Editor UI shell
 

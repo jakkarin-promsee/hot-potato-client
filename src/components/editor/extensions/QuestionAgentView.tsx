@@ -16,6 +16,7 @@ import {
   buildQuestionAgentUserContext,
   getQuestionAgentContextAbove,
 } from "./questionAgentContext";
+import AiErrorRetry from "./AiErrorRetry";
 import BlockMoveControls from "./BlockMoveControls";
 import { useEditorI18n } from "../editor.i18n";
 
@@ -49,8 +50,12 @@ function useAutoGrow(value: string) {
   return ref;
 }
 
-const buildFallbackReply = (question: string) =>
-  `I couldn't get an AI response right now. Your question was: "${question}". Please try again.`;
+class AiUnavailableError extends Error {
+  constructor() {
+    super("AI unavailable");
+    this.name = "AiUnavailableError";
+  }
+}
 
 async function askAi(
   question: string,
@@ -65,10 +70,11 @@ async function askAi(
     });
 
     const answer = response.data?.answer?.trim();
-    if (!answer) return buildFallbackReply(question);
+    if (!answer) throw new AiUnavailableError();
     return answer;
-  } catch {
-    return buildFallbackReply(question);
+  } catch (error) {
+    if (error instanceof AiUnavailableError) throw error;
+    throw new AiUnavailableError();
   }
 }
 
@@ -97,6 +103,7 @@ export default function QuestionAgentView({
   );
   const [questionInput, setQuestionInput] = useState("");
   const [isAsking, setIsAsking] = useState(false);
+  const [aiError, setAiError] = useState(false);
   const inputRef = useAutoGrow(questionInput);
   const hasAsked = chatHistory.length > 0;
 
@@ -132,6 +139,7 @@ export default function QuestionAgentView({
     if (!question || isAsking) return;
 
     setIsAsking(true);
+    setAiError(false);
     try {
       const context = getQuestionAgentContextAbove(editor, getPos);
       const userContext = buildQuestionAgentUserContext(
@@ -149,6 +157,10 @@ export default function QuestionAgentView({
       // Enter special mode automatically after first question.
       setCollapsed(false);
       setAnswer(blockId, { chatHistory: nextHistory, collapsed: false });
+    } catch (error) {
+      if (error instanceof AiUnavailableError) {
+        setAiError(true);
+      }
     } finally {
       setIsAsking(false);
     }
@@ -208,32 +220,37 @@ export default function QuestionAgentView({
         )}
 
         {!hasAsked ? (
-          <div className="flex items-start gap-2">
-            <textarea
-              ref={inputRef}
-              rows={1}
-              value={questionInput}
-              onMouseDown={(e) => e.stopPropagation()}
-              onChange={(e) => setQuestionInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  void handleAsk();
-                }
-              }}
-              placeholder={t("Ask AI something...", "ถาม AI ได้เลย...")}
-              className="flex-1 resize-none overflow-hidden rounded-lg border border-gray-200 bg-white px-3 py-2 text-base text-gray-800 placeholder:text-gray-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
-            />
-            <button
-              type="button"
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={() => void handleAsk()}
-              disabled={isAsking || !questionInput.trim()}
-              className="flex h-9 items-center gap-1 rounded-lg bg-violet-600 px-3 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <SendHorizontal className="h-3.5 w-3.5" />
-              {t("Ask", "ถาม")}
-            </button>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-start gap-2">
+              <textarea
+                ref={inputRef}
+                rows={1}
+                value={questionInput}
+                onMouseDown={(e) => e.stopPropagation()}
+                onChange={(e) => setQuestionInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    void handleAsk();
+                  }
+                }}
+                placeholder={t("Ask AI something...", "ถาม AI ได้เลย...")}
+                className="flex-1 resize-none overflow-hidden rounded-lg border border-gray-200 bg-white px-3 py-2 text-base text-gray-800 placeholder:text-gray-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+              />
+              <button
+                type="button"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => void handleAsk()}
+                disabled={isAsking || !questionInput.trim()}
+                className="flex h-9 items-center gap-1 rounded-lg bg-violet-600 px-3 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <SendHorizontal className="h-3.5 w-3.5" />
+                {t("Ask", "ถาม")}
+              </button>
+            </div>
+            {aiError && (
+              <AiErrorRetry onRetry={() => void handleAsk()} loading={isAsking} />
+            )}
           </div>
         ) : !collapsed ? (
           <div className="flex flex-col gap-3">
@@ -281,6 +298,9 @@ export default function QuestionAgentView({
                 {t("Ask", "ถาม")}
               </button>
             </div>
+            {aiError && (
+              <AiErrorRetry onRetry={() => void handleAsk()} loading={isAsking} />
+            )}
           </div>
         ) : (
           <div className="rounded-lg border border-gray-200 bg-white p-3">
