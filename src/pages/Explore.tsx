@@ -6,6 +6,7 @@ import { useContentStore } from "@/stores/content.store";
 import { useLearningHistoryStore } from "@/stores/learningHistory.store";
 import { useAuthStore } from "@/stores/auth.store";
 import { formatAuthorLine } from "@/lib/formatAuthors";
+import { useBookmarkStore } from "@/stores/bookmark.store";
 
 const TABS = ["All", "Bookmarked", "Recent"] as const;
 
@@ -15,7 +16,9 @@ export default function Explore() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("All");
   const [search, setSearch] = useState("");
-  const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
+  const bookmarkIds = useBookmarkStore((s) => s.ids);
+  const toggleBookmark = useBookmarkStore((s) => s.toggle);
+  const hasBookmark = useBookmarkStore((s) => s.has);
   const {
     exploreContents,
     exploreLoading,
@@ -68,7 +71,7 @@ export default function Explore() {
 
   const displayed = useMemo(() => {
     if (activeTab === "Bookmarked") {
-      return validContents.filter((c) => bookmarks.has(c._id));
+      return validContents.filter((c) => hasBookmark(c._id));
     }
     if (activeTab === "Recent") {
       const cutoff = Date.now() - RECENT_MS;
@@ -77,15 +80,7 @@ export default function Explore() {
       );
     }
     return validContents;
-  }, [activeTab, validContents, bookmarks]);
-
-  const toggleBookmark = (id: string) => {
-    setBookmarks((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
+  }, [activeTab, validContents, bookmarkIds, hasBookmark]);
 
   return (
     <div className="container px-4 pb-24 pt-6 md:pb-8">
@@ -187,7 +182,7 @@ export default function Explore() {
               coverUrl={c.title_image}
               topics={c.topics}
               author={formatAuthorLine(c.author_name, c.collaborator_names)}
-              bookmarked={bookmarks.has(c._id)}
+              bookmarked={hasBookmark(c._id)}
               onBookmark={() => toggleBookmark(c._id)}
               onClick={() => navigate(`/view/${c._id}`)}
             />

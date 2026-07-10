@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth.store";
@@ -21,8 +21,7 @@ export function RequireLogin({
   children,
 }: RequireLoginProps) {
   const token = useAuthStore((s) => s.token);
-
-  console.log(token);
+  const location = useLocation();
 
   if (token) {
     return <>{children}</>;
@@ -37,7 +36,10 @@ export function RequireLogin({
         {description}
       </p>
       <Button className="mt-8 gap-2" asChild>
-        <Link to="/login">
+        <Link
+          to="/login"
+          state={{ from: location.pathname + location.search }}
+        >
           <LogIn className="h-4 w-4" />
           Log in
         </Link>

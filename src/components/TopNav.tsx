@@ -31,7 +31,6 @@ const authOnlyNavItems = [
   { to: "/history", icon: History, label: "History" },
   { to: "/create", icon: PenSquare, label: "Create" },
   { to: "/profile", icon: User, label: "Profile" },
-  { to: "/settings", icon: Settings, label: "Settings" },
 ];
 
 export function TopNav() {
@@ -40,7 +39,11 @@ export function TopNav() {
   const token = useAuthStore((s) => s.token);
   const showLoginLink = !token && pathname !== "/login";
   const navItems = token
-    ? [...publicNavItems, ...authOnlyNavItems]
+    ? [
+        ...publicNavItems.filter((item) => item.to !== "/settings"),
+        ...authOnlyNavItems,
+        publicNavItems.find((item) => item.to === "/settings")!,
+      ]
     : publicNavItems;
 
   return (

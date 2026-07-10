@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -12,8 +12,17 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "../stores/auth.store";
 import { useContentStore } from "../stores/content.store";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-// Format date helper
 const formatDate = (dateStr: string) => {
   return new Date(dateStr).toLocaleDateString("en-US", {
     month: "short",
@@ -28,6 +37,7 @@ const Dashboard = () => {
   const {
     contents,
     isLoading,
+    error,
     fetchMyContents,
     searchContents,
     createContent,
@@ -37,13 +47,15 @@ const Dashboard = () => {
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
-  // Load contents on mount
   useEffect(() => {
     fetchMyContents();
-  }, []);
+  }, [fetchMyContents]);
 
-  // Debounce search
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (search.trim()) {
@@ -53,7 +65,7 @@ const Dashboard = () => {
       }
     }, 400);
     return () => clearTimeout(timeout);
-  }, [search]);
+  }, [search, searchContents, fetchMyContents]);
 
   const handleCreate = async () => {
     setCreating(true);
@@ -61,11 +73,12 @@ const Dashboard = () => {
     navigate(`/canvas/${content_id}`);
   };
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation(); // prevent card click
-    setDeletingId(id);
-    await deleteContent(id);
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeletingId(deleteTarget.id);
+    await deleteContent(deleteTarget.id);
     setDeletingId(null);
+    setDeleteTarget(null);
   };
 
   const handleLogout = () => {
@@ -75,7 +88,6 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-2 font-semibold text-primary">
@@ -98,9 +110,7 @@ const Dashboard = () => {
         </div>
       </header>
 
-      {/* Main */}
       <main className="container px-4 py-8 md:py-10">
-        {/* Title + Create btn */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-3xl font-bold tracking-tight text-foreground font-serif">
@@ -125,7 +135,12 @@ const Dashboard = () => {
           </button>
         </div>
 
-        {/* Search bar */}
+        {error && (
+          <p className="mb-4 text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        )}
+
         <div className="relative mb-8 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
@@ -137,14 +152,12 @@ const Dashboard = () => {
           />
         </div>
 
-        {/* Loading state */}
         {isLoading && (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="animate-spin text-muted-foreground" size={28} />
           </div>
         )}
 
-        {/* Empty state */}
         {!isLoading && contents.length === 0 && (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <FileText size={48} className="text-muted-foreground/30 mb-4" />
@@ -156,7 +169,6 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Content grid */}
         {!isLoading && contents.length > 0 && (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {contents.map((content) => (
@@ -165,7 +177,6 @@ const Dashboard = () => {
                 onClick={() => navigate(`/canvas/${content._id}`)}
                 className="group relative rounded-lg border border-border bg-card overflow-hidden cursor-pointer hover:border-primary/50 hover:shadow-md transition-all"
               >
-                {/* Thumbnail */}
                 <div className="h-36 bg-secondary flex items-center justify-center overflow-hidden">
                   {content.title_image ? (
                     <img
@@ -178,7 +189,6 @@ const Dashboard = () => {
                   )}
                 </div>
 
-                {/* Info */}
                 <div className="p-4">
                   <h3 className="font-medium text-foreground text-sm truncate">
                     {content.title}
@@ -189,11 +199,18 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                {/* Delete btn — shows on hover */}
                 <button
-                  onClick={(e) => handleDelete(e, content._id)}
+                  type="button"
+                  aria-label="Delete lesson"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteTarget({
+                      id: content._id,
+                      title: content.title,
+                    });
+                  }}
                   disabled={deletingId === content._id}
-                  className="absolute top-2 right-2 p-1.5 rounded-md bg-background/80 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all"
+                  className="absolute top-2 right-2 p-1.5 rounded-md bg-background/80 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all"
                 >
                   {deletingId === content._id ? (
                     <Loader2 size={14} className="animate-spin" />
@@ -206,6 +223,32 @@ const Dashboard = () => {
           </div>
         )}
       </main>
+
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete lesson?</AlertDialogTitle>
+            <AlertDialogDescription>
+              &ldquo;{deleteTarget?.title}&rdquo; will be permanently deleted.
+              This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmDelete}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

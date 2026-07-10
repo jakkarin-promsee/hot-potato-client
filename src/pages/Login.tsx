@@ -1,40 +1,115 @@
 import { useAuthStore } from "@/stores/auth.store";
+import { isSafeRedirectTarget } from "@/lib/axios";
+import { Info } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import {
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
+
+const SESSION_BANNER_COPY: Record<string, string> = {
+  TOKEN_EXPIRED: "เซสชันหมดอายุแล้ว เข้าสู่ระบบอีกครั้งเพื่อไปต่อได้เลย",
+  TOKEN_INVALID: "กรุณาเข้าสู่ระบบอีกครั้ง",
+  TOKEN_MISSING: "กรุณาเข้าสู่ระบบอีกครั้ง",
+  USER_NOT_FOUND: "กรุณาเข้าสู่ระบบอีกครั้ง",
+};
+
+function resolveRedirectTarget(
+  stateFrom: unknown,
+  redirectParam: string | null,
+): string {
+  if (typeof stateFrom === "string" && isSafeRedirectTarget(stateFrom)) {
+    return stateFrom;
+  }
+  if (redirectParam && isSafeRedirectTarget(redirectParam)) {
+    return redirectParam;
+  }
+  return "/explore";
+}
 
 const Login = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [serverError, setServerError] = useState("");
 
-  const { login, register, isLoading, error } = useAuthStore();
+  const { login, register, isLoading } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  useEffect(() => {
-    const reason = searchParams.get("reason");
-    if (reason) {
-      useAuthStore.setState({ error: reason });
+  const reason = searchParams.get("reason");
+  const code = searchParams.get("code");
+  const sessionBanner =
+    code && SESSION_BANNER_COPY[code]
+      ? SESSION_BANNER_COPY[code]
+      : reason || null;
+
+  const clearErrors = () => {
+    setFieldErrors({});
+    setServerError("");
+  };
+
+  const toggleMode = () => {
+    setIsSignUp((v) => !v);
+    clearErrors();
+  };
+
+  const validate = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (isSignUp) {
+      if (!name.trim()) errors.name = "Name is required.";
     }
-  }, [searchParams]);
+
+    if (!email.trim()) {
+      errors.email = "Email is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      errors.email = "Enter a valid email address.";
+    }
+
+    if (!password) {
+      errors.password = "Password is required.";
+    } else if (isSignUp && password.length < 8) {
+      errors.password = "Password must be at least 8 characters.";
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearErrors();
+
+    if (!validate()) return;
 
     try {
       if (isSignUp) {
-        await register(name, email, password);
+        await register(name.trim(), email.trim(), password);
       } else {
-        await login(email, password);
+        await login(email.trim(), password);
       }
-      navigate("/explore"); // ✅ redirect after success
-    } catch (err: any) {
-      // error is handled in store, but you can also catch axios errors here
-      const message = err.response?.data?.message || "Something went wrong";
-      useAuthStore.setState({ error: message, isLoading: false });
+      const target = resolveRedirectTarget(
+        (location.state as { from?: string } | null)?.from,
+        searchParams.get("redirect"),
+      );
+      navigate(target, { replace: true });
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || "Something went wrong";
+      setServerError(message);
+      useAuthStore.setState({ isLoading: false });
     }
   };
+
+  useEffect(() => {
+    clearErrors();
+  }, [searchParams]);
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-4 py-10">
@@ -55,6 +130,16 @@ const Login = () => {
         </div>
 
         <div className="rounded-lg border border-border bg-card p-6">
+          {sessionBanner && (
+            <div
+              className="mb-4 flex gap-2 rounded-md border border-border bg-accent px-3 py-2.5 text-sm text-foreground"
+              role="status"
+            >
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <span>{sessionBanner}</span>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             {isSignUp && (
               <div className="space-y-2">
@@ -69,9 +154,21 @@ const Login = () => {
                   type="text"
                   placeholder="Your name"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (fieldErrors.name) {
+                      setFieldErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.name;
+                        return next;
+                      });
+                    }
+                  }}
                   className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-ring"
                 />
+                {fieldErrors.name && (
+                  <p className="text-xs text-red-500">{fieldErrors.name}</p>
+                )}
               </div>
             )}
 
@@ -87,39 +184,57 @@ const Login = () => {
                 type="email"
                 placeholder="you@example.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (fieldErrors.email) {
+                    setFieldErrors((prev) => {
+                      const next = { ...prev };
+                      delete next.email;
+                      return next;
+                    });
+                  }
+                }}
                 className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-ring"
               />
+              {fieldErrors.email && (
+                <p className="text-xs text-red-500">{fieldErrors.email}</p>
+              )}
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label
-                  htmlFor="password"
-                  className="block text-sm text-secondary-foreground"
-                >
-                  Password
-                </label>
-                {!isSignUp && (
-                  <button
-                    type="button"
-                    className="text-xs text-muted-foreground transition-colors hover:text-primary"
-                  >
-                    Forgot password?
-                  </button>
-                )}
-              </div>
+              <label
+                htmlFor="password"
+                className="block text-sm text-secondary-foreground"
+              >
+                Password
+              </label>
               <input
                 id="password"
                 type="password"
                 placeholder="••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (fieldErrors.password) {
+                    setFieldErrors((prev) => {
+                      const next = { ...prev };
+                      delete next.password;
+                      return next;
+                    });
+                  }
+                }}
                 className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-ring"
               />
+              {fieldErrors.password && (
+                <p className="text-xs text-red-500">{fieldErrors.password}</p>
+              )}
             </div>
 
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {serverError && (
+              <p className="text-sm text-red-500" role="alert">
+                {serverError}
+              </p>
+            )}
 
             <button
               type="submit"
@@ -133,41 +248,13 @@ const Login = () => {
                   : "Sign in"}
             </button>
           </form>
-
-          <div className="my-5 flex items-center gap-3">
-            <div className="h-px flex-1 bg-border" />
-            <span className="text-xs text-muted-foreground">or</span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
-
-          <button className="flex w-full items-center justify-center gap-2 rounded-md border border-border bg-transparent px-4 py-2 text-sm font-medium text-secondary-foreground transition-colors hover:bg-accent">
-            <svg className="h-4 w-4" viewBox="0 0 24 24">
-              <path
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-                fill="#4285F4"
-              />
-              <path
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                fill="#34A853"
-              />
-              <path
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                fill="#FBBC05"
-              />
-              <path
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                fill="#EA4335"
-              />
-            </svg>
-            Continue with Google
-          </button>
         </div>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
           {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
           <button
             type="button"
-            onClick={() => setIsSignUp(!isSignUp)}
+            onClick={toggleMode}
             className="font-medium text-primary transition-colors hover:text-primary/80"
           >
             {isSignUp ? "Sign in" : "Create account"}

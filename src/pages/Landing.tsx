@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, BookOpen, Sparkles, Zap, Eye, Users } from "lucide-react";
+import { ArrowRight, BookOpen, Sparkles, Bot, Eye, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const features = [
@@ -9,14 +9,14 @@ const features = [
     desc: "Long-form visual content that flows naturally, designed for deep understanding.",
   },
   {
+    icon: Bot,
+    title: "A tutor in your pocket",
+    desc: "Ask anything, get warm coaching in Thai — no login needed. น้องมันฝรั่ง guides you with suggestion chips.",
+  },
+  {
     icon: Sparkles,
     title: "Built for intuition",
     desc: "Not memorization — feel the concepts click through carefully crafted visual storytelling.",
-  },
-  {
-    icon: Zap,
-    title: "Interactive elements",
-    desc: "Engage with the content. Answer, explore, and build understanding step by step.",
   },
 ];
 

@@ -1,52 +1,184 @@
-import { useState } from "react";
-import { Save, Camera } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Save, Camera, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useThemeStore } from "@/stores/theme.store";
+import { useAuthStore } from "@/stores/auth.store";
+import { useProfileStore } from "@/stores/profile.store";
 import { useNavigate } from "react-router-dom";
+import { applyTransform, uploadImage } from "@/lib/cloudinary";
+
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 
 export default function Profile() {
   const { theme } = useThemeStore();
   const navigate = useNavigate();
-  const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    nickname: "",
-    bio: "",
-    age: "",
-    role: "student",
-  });
+  const user = useAuthStore((s) => s.user);
+  const { profile, isLoading, isSaving, error, fetchProfile, saveProfile } =
+    useProfileStore();
 
-  const update = (key: string, value: string) =>
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const [name, setName] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [bio, setBio] = useState("");
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [savedFlash, setSavedFlash] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    void fetchProfile();
+  }, [fetchProfile]);
+
+  useEffect(() => {
+    if (profile) {
+      setNickname(profile.nickname);
+      setBio(profile.bio);
+    }
+    if (user) {
+      setName(user.name);
+    }
+  }, [profile, user]);
+
+  const hasChanges =
+    profile !== null &&
+    (name.trim() !== (user?.name ?? "") ||
+      nickname !== profile.nickname ||
+      bio !== profile.bio);
+
+  const avatarLetter =
+    nickname?.[0]?.toUpperCase() ||
+    name?.[0]?.toUpperCase() ||
+    "U";
+
+  const handleSave = async () => {
+    const changes: Partial<{
+      name: string;
+      bio: string;
+      nickname: string;
+    }> = {};
+
+    if (name.trim() !== (user?.name ?? "")) changes.name = name.trim();
+    if (profile && nickname !== profile.nickname) changes.nickname = nickname;
+    if (profile && bio !== profile.bio) changes.bio = bio;
+
+    if (Object.keys(changes).length === 0) return;
+
+    try {
+      await saveProfile(changes);
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 2000);
+    } catch {
+      // error shown via store
+    }
+  };
+
+  const handleAvatarPick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setUploadError(null);
+
+    if (!file.type.startsWith("image/")) {
+      setUploadError("Please choose an image file.");
+      return;
+    }
+    if (file.size > MAX_AVATAR_BYTES) {
+      setUploadError("Image must be 5 MB or smaller.");
+      return;
+    }
+
+    setUploadProgress(0);
+    try {
+      const result = await uploadImage(file, {
+        onProgress: (pct) => setUploadProgress(pct),
+      });
+      await saveProfile({ avatar: result.secure_url });
+      setSavedFlash(true);
+      setTimeout(() => setSavedFlash(false), 2000);
+    } catch {
+      setUploadError("Avatar upload failed. Please try again.");
+    } finally {
+      setUploadProgress(null);
+    }
+  };
+
+  if (isLoading && !profile) {
+    return (
+      <div className="container flex min-h-[40vh] max-w-lg items-center justify-center px-4">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error && !profile) {
+    return (
+      <div className="container max-w-lg px-4 pb-12 pt-6 text-center">
+        <p className="text-sm text-destructive" role="alert">
+          {error}
+        </p>
+        <Button className="mt-4" variant="outline" onClick={() => fetchProfile()}>
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="container max-w-lg px-4 pb-12 pt-6">
       {/* Avatar */}
       <div className="flex flex-col items-center gap-3 text-center">
         <div className="relative">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/15">
-            <span className="font-serif text-2xl font-bold text-primary">
-              {form.nickname?.[0]?.toUpperCase() ||
-                form.firstName?.[0]?.toUpperCase() ||
-                "U"}
-            </span>
-          </div>
-          <button className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:text-foreground">
+          {profile?.avatar ? (
+            <img
+              src={applyTransform(profile.avatar, "w_150,h_150,c_fill")}
+              alt="Profile avatar"
+              className="h-20 w-20 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/15">
+              <span className="font-serif text-2xl font-bold text-primary">
+                {avatarLetter}
+              </span>
+            </div>
+          )}
+          {uploadProgress !== null && (
+            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-background/70 text-xs font-medium">
+              {uploadProgress}%
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={handleAvatarPick}
+            disabled={isSaving || uploadProgress !== null}
+            className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+          >
             <Camera className="h-3.5 w-3.5" />
           </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleAvatarChange}
+          />
         </div>
         <p className="text-xs text-muted-foreground">Tap to change avatar</p>
+        {uploadError && (
+          <p className="text-xs text-destructive" role="alert">
+            {uploadError}
+          </p>
+        )}
+        {user?.email && (
+          <p className="text-xs text-muted-foreground">{user.email}</p>
+        )}
       </div>
 
       {/* Form */}
@@ -61,32 +193,16 @@ export default function Profile() {
           <ThemeToggle />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label
-              htmlFor="firstName"
-              className="text-xs text-muted-foreground"
-            >
-              First name
-            </Label>
-            <Input
-              id="firstName"
-              value={form.firstName}
-              onChange={(e) => update("firstName", e.target.value)}
-              placeholder="John"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="lastName" className="text-xs text-muted-foreground">
-              Last name
-            </Label>
-            <Input
-              id="lastName"
-              value={form.lastName}
-              onChange={(e) => update("lastName", e.target.value)}
-              placeholder="Doe"
-            />
-          </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="name" className="text-xs text-muted-foreground">
+            Display name
+          </Label>
+          <Input
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Your name"
+          />
         </div>
 
         <div className="space-y-1.5">
@@ -95,53 +211,30 @@ export default function Profile() {
           </Label>
           <Input
             id="nickname"
-            value={form.nickname}
-            onChange={(e) => update("nickname", e.target.value)}
-            placeholder="johndoe"
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            placeholder="ให้เพื่อน ๆ เรียกว่าอะไร"
           />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="bio" className="text-xs text-muted-foreground">
-            Bio
-          </Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="bio" className="text-xs text-muted-foreground">
+              Bio
+            </Label>
+            <span className="text-[10px] text-muted-foreground">
+              {bio.length}/500
+            </span>
+          </div>
           <Textarea
             id="bio"
-            value={form.bio}
-            onChange={(e) => update("bio", e.target.value)}
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
             placeholder="Tell us a bit about yourself..."
             rows={3}
+            maxLength={500}
             className="resize-none"
           />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="age" className="text-xs text-muted-foreground">
-              Age
-            </Label>
-            <Input
-              id="age"
-              type="number"
-              min={13}
-              max={120}
-              value={form.age}
-              onChange={(e) => update("age", e.target.value)}
-              placeholder="18"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Role</Label>
-            <Select value={form.role} onValueChange={(v) => update("role", v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="student">Student</SelectItem>
-                <SelectItem value="teacher">Teacher</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </div>
 
         <Button
@@ -153,9 +246,31 @@ export default function Profile() {
           Change password
         </Button>
 
-        <Button className="w-full gap-2">
-          <Save className="h-4 w-4" /> Save changes
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            className="flex-1 gap-2"
+            disabled={isSaving || !hasChanges}
+            onClick={handleSave}
+          >
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            Save changes
+          </Button>
+          {savedFlash && (
+            <span className="text-sm text-green-600 dark:text-green-400">
+              Saved ✓
+            </span>
+          )}
+        </div>
+
+        {error && profile && (
+          <p className="text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        )}
       </div>
     </div>
   );

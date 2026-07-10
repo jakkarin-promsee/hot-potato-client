@@ -28,11 +28,11 @@ npm test           # vitest run
 **Tests:** Vitest + happy-dom. Config in `client/vitest.config.ts` (re-declares the `@` alias). Tests live next to the code they cover:
 
 ```
-client/src/components/editor/extensions/__tests__/
-├── questionEvaluation.test.ts        # choice accuracy math (deterministic)
-├── tutorApi.test.ts                  # unified tutor bridge: payloads, role mapping, errors
-├── MarkdownMessage.test.tsx          # markdown allowlist renderer (no HTML injection)
-└── FeedbackDiscussionPanel.test.tsx  # flat thread + suggestion chips (0.C)
+client/src/components/editor/extensions/__tests__/   # tutor + editor unit tests
+client/src/stores/__tests__/                       # profile.store, bookmark.store
+client/src/lib/__tests__/                          # axios helpers (isProtectedPath, buildForcedLoginUrl)
+client/src/pages/__tests__/                        # Profile, Login, Dashboard
+client/src/components/__tests__/                   # guards, TopNav
 ```
 
 **Working agreement:** every later phase ships tests for its own acceptance criteria; you're not done until `npm test` is green.
@@ -82,7 +82,7 @@ Defined in `App.tsx` with three guard components. `BrowserRouter` + `QueryClient
 | `/canvas/:id` | `TipTapCanvas` | `ProtectedRoute` | **The lesson editor** |
 | `/view/:id` | `TiptapView` | — | Public read-only lesson viewer (API uses optionalAuth) |
 | `/history` | `History` | `RequireLogin` | Recently opened lessons |
-| `/profile` | `Profile` | `RequireLogin` | Account |
+| `/profile` | `Profile` | `RequireLogin` | Account — loads/saves via `GET/PUT /users/me/profile` (Tier 2.A) |
 | `/change-password` | `ChangePassword` | `RequireLogin` | Security |
 | `/settings` | `Setting` | — | Settings |
 | `/uploadimage` | `Cloudinaryupload` | `ProtectedRoute` | Image upload tool |
@@ -91,11 +91,9 @@ Defined in `App.tsx` with three guard components. `BrowserRouter` + `QueryClient
 
 Routes under `/login … /settings` render inside `AppLayout` (shared nav chrome). The three guards:
 
-- **`ProtectedRoute`** — hard gate; redirects unauthenticated users to login.
-- **`RequireLogin`** — soft gate; renders an inline "please sign in" prompt (with `title`/`description` props) instead of redirecting. Used for personal-but-not-secret pages.
-- **`PublicRoute`** — for auth-only-when-logged-out pages (e.g. `/login`); bounces authenticated users away.
-
-> **Roadmap note (Phase 2.B):** the login/sign-in flow is a known cleanup target — see [`../ROADMAP.md`](../ROADMAP.md). Touch `Login`, the guards, and `lib/axios.ts`'s force-relogin handling together.
+- **`ProtectedRoute`** — hard gate; redirects unauthenticated users to `/login` with `state.from` for redirect-back (Tier 2.B).
+- **`RequireLogin`** — soft gate; renders an inline "please sign in" prompt (with `title`/`description` props) instead of redirecting. The login link carries `state.from`.
+- **`PublicRoute`** — for auth-only-when-logged-out pages (e.g. `/login`); bounces authenticated users to `redirect` query param or `/explore`.
 
 ## State management (Zustand)
 
@@ -104,6 +102,8 @@ Global stores in `src/stores/`. Each is a `create()` store; some use the `persis
 | Store | Responsibility |
 | --- | --- |
 | `auth.store` | `user` + `token` (**persisted** as `auth-storage`), `login` / `register` / `recheckToken` / `logout` |
+| `profile.store` | Account profile (`GET/PUT /users/me/profile`); syncs `auth.store` on name change |
+| `bookmark.store` | Device-local lesson bookmarks (**persisted** as `bookmark-storage`) |
 | `content.store` | The current lesson document (load / create / update / delete via API) |
 | `content-answer.store` | The student's answers for the current lesson (load / save / bulk-save) |
 | `learningHistory.store` | Recently visited lessons |
@@ -123,7 +123,7 @@ Global stores in `src/stores/`. Each is a `create()` store; some use the `persis
 
 - `baseURL = import.meta.env.VITE_API_URL`.
 - **Request interceptor** attaches `Authorization: Bearer <token>` from `auth.store`.
-- **Response interceptor** watches for the server's structured 401 (`forceRelogin` / `clearToken`, see [`../server/CLAUDE.md`](../server/CLAUDE.md)). On such a 401 it logs out and — only for protected paths — redirects to `/login?reason=...`. Pass `{ skipAuthRedirect: true }` on a request to opt out (e.g. `recheckToken` does this).
+- **Response interceptor** watches for the server's structured 401 (`forceRelogin` / `clearToken`, see [`../server/CLAUDE.md`](../server/CLAUDE.md)). On such a 401 it logs out and — only for protected paths — redirects to `/login?reason=...&code=...&redirect=...` via `buildForcedLoginUrl`. `Login` reads `state.from`, `redirect`, and shows a calm Thai banner from `code`. Pass `{ skipAuthRedirect: true }` on a request to opt out (e.g. `recheckToken` does this). Exported helpers: `isProtectedPath`, `isSafeRedirectTarget`, `buildForcedLoginUrl`.
 
 TanStack Query (`QueryClient` in `App.tsx`) is available for server-state caching; usage is partial — match whatever the page you're editing already does (store-driven vs. query-driven).
 
