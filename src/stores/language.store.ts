@@ -17,13 +17,12 @@ const applyDocumentLanguage = (language: AppLanguage) => {
 };
 
 const detectInitialLanguage = (): AppLanguage => {
-  if (typeof window === "undefined") return "en";
+  if (typeof window === "undefined") return "th";
 
   const saved = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
   if (saved === "en" || saved === "th") return saved;
 
-  const locale = window.navigator.language.toLowerCase();
-  return locale.startsWith("th") ? "th" : "en";
+  return "th";
 };
 
 export const useLanguageStore = create<LanguageState>((set, get) => {

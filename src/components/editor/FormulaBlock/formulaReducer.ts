@@ -1,5 +1,6 @@
 import type {
   FormulaAction,
+  FormulaInsertLocation,
   FormulaNode,
   FormulaNodeType,
   FormulaState,
@@ -96,7 +97,7 @@ function insertNodeByParentId(
   current: FormulaNode,
   parentId: string,
   nodeToInsert: FormulaNode,
-  location: FormulaAction & { type: "INSERT_NODE" }["location"],
+  location: FormulaInsertLocation,
 ): FormulaNode {
   if (current.id === parentId) {
     if (location.kind === "row") {

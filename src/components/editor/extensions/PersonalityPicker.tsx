@@ -19,8 +19,8 @@ export default function PersonalityPicker() {
             className={[
               "inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition",
               selected
-                ? "border-violet-500 bg-violet-50 text-violet-700"
-                : "border-gray-200 bg-white text-gray-700 hover:border-violet-200",
+                ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/25"
+                : "border-border bg-muted/50 text-foreground hover:border-primary/40 hover:bg-accent",
             ].join(" ")}
           >
             <span aria-hidden>{preset.emoji}</span>

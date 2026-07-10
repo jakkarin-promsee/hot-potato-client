@@ -8,6 +8,12 @@ import Login from "../Login";
 const mockLogin = vi.fn();
 const mockRegister = vi.fn();
 const mockNavigate = vi.fn();
+let language: "en" | "th" = "en";
+
+vi.mock("@/stores/language.store", () => ({
+  useLanguageStore: (selector: (s: { language: "en" | "th" }) => unknown) =>
+    selector({ language }),
+}));
 
 vi.mock("@/stores/auth.store", () => ({
   useAuthStore: () => ({
@@ -61,6 +67,7 @@ afterEach(() => {
 });
 
 beforeEach(() => {
+  language = "en";
   mockLogin.mockReset();
   mockRegister.mockReset();
   mockNavigate.mockReset();
@@ -70,6 +77,7 @@ beforeEach(() => {
 
 describe("Login page", () => {
   it("renders Thai session banner from code query", () => {
+    language = "th";
     const el = renderLogin("/login?reason=raw&code=TOKEN_EXPIRED");
     expect(el.textContent).toContain(
       "เซสชันหมดอายุแล้ว เข้าสู่ระบบอีกครั้งเพื่อไปต่อได้เลย",
@@ -180,5 +188,14 @@ describe("Login page", () => {
     });
 
     expect(mockNavigate).toHaveBeenCalledWith("/explore", { replace: true });
+  });
+
+  it("renders Thai copy when language is Thai", () => {
+    language = "th";
+    const el = renderLogin();
+    expect(el.textContent).toContain("ยินดีต้อนรับกลับ");
+    expect(el.textContent).toContain("เข้าสู่บัญชีของคุณ");
+    expect(el.textContent).toContain("อีเมล");
+    expect(el.textContent).toContain("รหัสผ่าน");
   });
 });

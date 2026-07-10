@@ -449,6 +449,7 @@ function TiptapViewer({ onScrollDirectionChange }: TiptapViewerProps) {
                   <SuggestionChips
                     suggestions={aiSuggestions}
                     onPick={(text) => void ask(text)}
+                    layout="scroll"
                   />
                 </div>
               )}

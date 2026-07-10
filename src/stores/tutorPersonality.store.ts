@@ -40,7 +40,8 @@ export const useTutorPersonalityStore = create<TutorPersonalityState>()(
             "/chat/memory",
             { skipAuthRedirect: true },
           );
-          const fromServer = res.data?.tutor_personality?.trim();
+          const raw = res.data?.tutor_personality;
+          const fromServer = typeof raw === "string" ? raw.trim() : "";
           if (fromServer) set({ personality: fromServer });
         } catch {
           // anonymous-style degrade — keep local choice

@@ -1,5 +1,6 @@
 import { useAuthStore } from "@/stores/auth.store";
 import { isSafeRedirectTarget } from "@/lib/axios";
+import { useAppI18n } from "@/lib/i18n";
 import { Info } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
@@ -8,11 +9,23 @@ import {
   useSearchParams,
 } from "react-router-dom";
 
-const SESSION_BANNER_COPY: Record<string, string> = {
-  TOKEN_EXPIRED: "เซสชันหมดอายุแล้ว เข้าสู่ระบบอีกครั้งเพื่อไปต่อได้เลย",
-  TOKEN_INVALID: "กรุณาเข้าสู่ระบบอีกครั้ง",
-  TOKEN_MISSING: "กรุณาเข้าสู่ระบบอีกครั้ง",
-  USER_NOT_FOUND: "กรุณาเข้าสู่ระบบอีกครั้ง",
+const SESSION_BANNER_COPY: Record<string, { en: string; th: string }> = {
+  TOKEN_EXPIRED: {
+    en: "Your session expired. Sign in again to continue.",
+    th: "เซสชันหมดอายุแล้ว เข้าสู่ระบบอีกครั้งเพื่อไปต่อได้เลย",
+  },
+  TOKEN_INVALID: {
+    en: "Please sign in again.",
+    th: "กรุณาเข้าสู่ระบบอีกครั้ง",
+  },
+  TOKEN_MISSING: {
+    en: "Please sign in again.",
+    th: "กรุณาเข้าสู่ระบบอีกครั้ง",
+  },
+  USER_NOT_FOUND: {
+    en: "Please sign in again.",
+    th: "กรุณาเข้าสู่ระบบอีกครั้ง",
+  },
 };
 
 function resolveRedirectTarget(
@@ -40,12 +53,13 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { t } = useAppI18n();
 
   const reason = searchParams.get("reason");
   const code = searchParams.get("code");
   const sessionBanner =
     code && SESSION_BANNER_COPY[code]
-      ? SESSION_BANNER_COPY[code]
+      ? t(SESSION_BANNER_COPY[code].en, SESSION_BANNER_COPY[code].th)
       : reason || null;
 
   const clearErrors = () => {
@@ -62,19 +76,27 @@ const Login = () => {
     const errors: Record<string, string> = {};
 
     if (isSignUp) {
-      if (!name.trim()) errors.name = "Name is required.";
+      if (!name.trim()) {
+        errors.name = t("Name is required.", "กรุณากรอกชื่อ");
+      }
     }
 
     if (!email.trim()) {
-      errors.email = "Email is required.";
+      errors.email = t("Email is required.", "กรุณากรอกอีเมล");
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      errors.email = "Enter a valid email address.";
+      errors.email = t(
+        "Enter a valid email address.",
+        "กรอกอีเมลให้ถูกต้อง",
+      );
     }
 
     if (!password) {
-      errors.password = "Password is required.";
+      errors.password = t("Password is required.", "กรุณากรอกรหัสผ่าน");
     } else if (isSignUp && password.length < 8) {
-      errors.password = "Password must be at least 8 characters.";
+      errors.password = t(
+        "Password must be at least 8 characters.",
+        "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร",
+      );
     }
 
     setFieldErrors(errors);
@@ -101,7 +123,7 @@ const Login = () => {
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || "Something went wrong";
+          ?.message || t("Something went wrong", "เกิดข้อผิดพลาด");
       setServerError(message);
       useAuthStore.setState({ isLoading: false });
     }
@@ -120,12 +142,17 @@ const Login = () => {
       <div className="relative w-full max-w-100">
         <div className="mb-8 text-center">
           <h1 className="font-serif text-3xl font-semibold tracking-tight text-foreground">
-            {isSignUp ? "Create account" : "Welcome back"}
+            {isSignUp
+              ? t("Create account", "สร้างบัญชี")
+              : t("Welcome back", "ยินดีต้อนรับกลับ")}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {isSignUp
-              ? "Enter your details to get started"
-              : "Sign in to your account"}
+              ? t(
+                  "Enter your details to get started",
+                  "กรอกข้อมูลเพื่อเริ่มต้น",
+                )
+              : t("Sign in to your account", "เข้าสู่บัญชีของคุณ")}
           </p>
         </div>
 
@@ -147,12 +174,12 @@ const Login = () => {
                   htmlFor="name"
                   className="block text-sm text-secondary-foreground"
                 >
-                  Name
+                  {t("Name", "ชื่อ")}
                 </label>
                 <input
                   id="name"
                   type="text"
-                  placeholder="Your name"
+                  placeholder={t("Your name", "ชื่อของคุณ")}
                   value={name}
                   onChange={(e) => {
                     setName(e.target.value);
@@ -177,7 +204,7 @@ const Login = () => {
                 htmlFor="email"
                 className="block text-sm text-secondary-foreground"
               >
-                Email
+                {t("Email", "อีเมล")}
               </label>
               <input
                 id="email"
@@ -206,7 +233,7 @@ const Login = () => {
                 htmlFor="password"
                 className="block text-sm text-secondary-foreground"
               >
-                Password
+                {t("Password", "รหัสผ่าน")}
               </label>
               <input
                 id="password"
@@ -242,22 +269,26 @@ const Login = () => {
               className="w-full mt-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
             >
               {isLoading
-                ? "Please wait..."
+                ? t("Please wait...", "กรุณารอสักครู่...")
                 : isSignUp
-                  ? "Create account"
-                  : "Sign in"}
+                  ? t("Create account", "สร้างบัญชี")
+                  : t("Sign in", "เข้าสู่ระบบ")}
             </button>
           </form>
         </div>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+          {isSignUp
+            ? t("Already have an account?", "มีบัญชีอยู่แล้ว?")
+            : t("Don't have an account?", "ยังไม่มีบัญชี?")}{" "}
           <button
             type="button"
             onClick={toggleMode}
             className="font-medium text-primary transition-colors hover:text-primary/80"
           >
-            {isSignUp ? "Sign in" : "Create account"}
+            {isSignUp
+              ? t("Sign in", "เข้าสู่ระบบ")
+              : t("Create account", "สร้างบัญชี")}
           </button>
         </p>
       </div>

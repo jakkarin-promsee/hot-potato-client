@@ -13,7 +13,16 @@ vi.mock("@/stores/auth.store", () => ({
 }));
 
 vi.mock("@/components/ThemeToggle", () => ({
-  ThemeToggle: () => <div />,
+  ThemeToggle: () => <div data-testid="theme-toggle" />,
+}));
+
+vi.mock("@/components/LanguageToggle", () => ({
+  LanguageToggle: () => <div data-testid="language-toggle" />,
+}));
+
+vi.mock("@/stores/language.store", () => ({
+  useLanguageStore: (selector: (s: { language: "en" | "th" }) => unknown) =>
+    selector({ language: "en" }),
 }));
 
 let container: HTMLDivElement | null = null;

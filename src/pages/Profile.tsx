@@ -10,12 +10,14 @@ import { useAuthStore } from "@/stores/auth.store";
 import { useProfileStore } from "@/stores/profile.store";
 import { useNavigate } from "react-router-dom";
 import { applyTransform, uploadImage } from "@/lib/cloudinary";
+import { useAppI18n } from "@/lib/i18n";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 
 export default function Profile() {
   const { theme } = useThemeStore();
   const navigate = useNavigate();
+  const { t } = useAppI18n();
   const user = useAuthStore((s) => s.user);
   const { profile, isLoading, isSaving, error, fetchProfile, saveProfile } =
     useProfileStore();
@@ -87,11 +89,13 @@ export default function Profile() {
     setUploadError(null);
 
     if (!file.type.startsWith("image/")) {
-      setUploadError("Please choose an image file.");
+      setUploadError(t("Please choose an image file.", "กรุณาเลือกไฟล์รูปภาพ"));
       return;
     }
     if (file.size > MAX_AVATAR_BYTES) {
-      setUploadError("Image must be 5 MB or smaller.");
+      setUploadError(
+        t("Image must be 5 MB or smaller.", "รูปภาพต้องไม่เกิน 5 MB"),
+      );
       return;
     }
 
@@ -104,7 +108,12 @@ export default function Profile() {
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 2000);
     } catch {
-      setUploadError("Avatar upload failed. Please try again.");
+      setUploadError(
+        t(
+          "Avatar upload failed. Please try again.",
+          "อัปโหลดรูปโปรไฟล์ไม่สำเร็จ กรุณาลองอีกครั้ง",
+        ),
+      );
     } finally {
       setUploadProgress(null);
     }
@@ -125,7 +134,7 @@ export default function Profile() {
           {error}
         </p>
         <Button className="mt-4" variant="outline" onClick={() => fetchProfile()}>
-          Retry
+          {t("Retry", "ลองอีกครั้ง")}
         </Button>
       </div>
     );
@@ -139,7 +148,7 @@ export default function Profile() {
           {profile?.avatar ? (
             <img
               src={applyTransform(profile.avatar, "w_150,h_150,c_fill")}
-              alt="Profile avatar"
+              alt={t("Profile avatar", "รูปโปรไฟล์")}
               className="h-20 w-20 rounded-full object-cover"
             />
           ) : (
@@ -170,7 +179,9 @@ export default function Profile() {
             onChange={handleAvatarChange}
           />
         </div>
-        <p className="text-xs text-muted-foreground">Tap to change avatar</p>
+        <p className="text-xs text-muted-foreground">
+          {t("Tap to change avatar", "แตะเพื่อเปลี่ยนรูปโปรไฟล์")}
+        </p>
         {uploadError && (
           <p className="text-xs text-destructive" role="alert">
             {uploadError}
@@ -185,9 +196,13 @@ export default function Profile() {
       <div className="mt-8 space-y-5">
         <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2.5">
           <div>
-            <p className="text-sm font-medium text-foreground">Theme</p>
+            <p className="text-sm font-medium text-foreground">
+              {t("Theme", "ธีม")}
+            </p>
             <p className="text-xs text-muted-foreground">
-              Using {theme === "dark" ? "dark" : "light"} mode
+              {theme === "dark"
+                ? t("Using dark mode", "ใช้โหมดมืด")
+                : t("Using light mode", "ใช้โหมดสว่าง")}
             </p>
           </div>
           <ThemeToggle />
@@ -195,32 +210,35 @@ export default function Profile() {
 
         <div className="space-y-1.5">
           <Label htmlFor="name" className="text-xs text-muted-foreground">
-            Display name
+            {t("Display name", "ชื่อที่แสดง")}
           </Label>
           <Input
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Your name"
+            placeholder={t("Your name", "ชื่อของคุณ")}
           />
         </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="nickname" className="text-xs text-muted-foreground">
-            Nickname
+            {t("Nickname", "ชื่อเล่น")}
           </Label>
           <Input
             id="nickname"
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
-            placeholder="ให้เพื่อน ๆ เรียกว่าอะไร"
+            placeholder={t(
+              "What should friends call you?",
+              "ให้เพื่อน ๆ เรียกว่าอะไร",
+            )}
           />
         </div>
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <Label htmlFor="bio" className="text-xs text-muted-foreground">
-              Bio
+              {t("Bio", "เกี่ยวกับคุณ")}
             </Label>
             <span className="text-[10px] text-muted-foreground">
               {bio.length}/500
@@ -230,7 +248,10 @@ export default function Profile() {
             id="bio"
             value={bio}
             onChange={(e) => setBio(e.target.value)}
-            placeholder="Tell us a bit about yourself..."
+            placeholder={t(
+              "Tell us a bit about yourself...",
+              "เล่าเกี่ยวกับตัวคุณสักเล็กน้อย...",
+            )}
             rows={3}
             maxLength={500}
             className="resize-none"
@@ -243,7 +264,7 @@ export default function Profile() {
           className="w-full"
           onClick={() => navigate("/change-password")}
         >
-          Change password
+          {t("Change password", "เปลี่ยนรหัสผ่าน")}
         </Button>
 
         <div className="flex items-center gap-3">
@@ -257,11 +278,11 @@ export default function Profile() {
             ) : (
               <Save className="h-4 w-4" />
             )}
-            Save changes
+            {t("Save changes", "บันทึกการเปลี่ยนแปลง")}
           </Button>
           {savedFlash && (
             <span className="text-sm text-green-600 dark:text-green-400">
-              Saved ✓
+              {t("Saved ✓", "บันทึกแล้ว ✓")}
             </span>
           )}
         </div>

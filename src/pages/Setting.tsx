@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useThemeStore } from "@/stores/theme.store";
 import { useAuthStore } from "@/stores/auth.store";
+import { useLanguageStore } from "@/stores/language.store";
 import PersonalityPicker from "@/components/editor/extensions/PersonalityPicker";
 import { useTutorPersonalityStore } from "@/stores/tutorPersonality.store";
 
@@ -24,6 +25,7 @@ interface SettingRow {
 
 export default function Settings() {
   const { theme } = useThemeStore();
+  const token = useAuthStore((s) => s.token);
   const logout = useAuthStore((s) => s.logout);
   const language = useLanguageStore((s) => s.language);
   const setLanguage = useLanguageStore((s) => s.setLanguage);
@@ -62,23 +64,30 @@ export default function Settings() {
         },
       ],
     },
-    {
-      heading: t("Danger zone", "โซนอันตราย"),
-      items: [
-        {
-          icon: LogOut,
-          label: t("Log out", "ออกจากระบบ"),
-          description: t("Sign out of your account", "ออกจากบัญชีของคุณ"),
-          destructive: true,
-        },
-        {
-          icon: Trash2,
-          label: t("Delete account", "ลบบัญชี"),
-          description: t("Permanently remove your data", "ลบข้อมูลของคุณอย่างถาวร"),
-          destructive: true,
-        },
-      ],
-    },
+    ...(token
+      ? [
+          {
+            heading: t("Danger zone", "โซนอันตราย"),
+            items: [
+              {
+                icon: LogOut,
+                label: t("Log out", "ออกจากระบบ"),
+                description: t("Sign out of your account", "ออกจากบัญชีของคุณ"),
+                destructive: true,
+              },
+              {
+                icon: Trash2,
+                label: t("Delete account", "ลบบัญชี"),
+                description: t(
+                  "Permanently remove your data",
+                  "ลบข้อมูลของคุณอย่างถาวร",
+                ),
+                destructive: true,
+              },
+            ],
+          },
+        ]
+      : []),
   ];
 
   const handleLogout = () => {

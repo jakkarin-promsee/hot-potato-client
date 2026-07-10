@@ -17,8 +17,15 @@ const { profileState, mockFetchProfile, mockSaveProfile } = vi.hoisted(() => ({
   },
 }));
 
+let language: "en" | "th" = "en";
+
 profileState.fetchProfile = mockFetchProfile;
 profileState.saveProfile = mockSaveProfile;
+
+vi.mock("@/stores/language.store", () => ({
+  useLanguageStore: (selector: (s: { language: "en" | "th" }) => unknown) =>
+    selector({ language }),
+}));
 
 vi.mock("@/stores/profile.store", () => ({
   useProfileStore: (selector?: (s: typeof profileState) => unknown) =>
@@ -77,6 +84,7 @@ afterEach(() => {
 });
 
 beforeEach(() => {
+  language = "en";
   mockFetchProfile.mockReset();
   mockSaveProfile.mockResolvedValue(undefined);
 });
@@ -103,5 +111,14 @@ describe("Profile page", () => {
     });
 
     expect(mockSaveProfile).toHaveBeenCalledWith({ bio: "Updated bio" });
+  });
+
+  it("renders Thai copy when language is Thai", () => {
+    language = "th";
+    const el = render(<Profile />);
+    expect(el.textContent).toContain("แตะเพื่อเปลี่ยนรูปโปรไฟล์");
+    expect(el.textContent).toContain("ชื่อที่แสดง");
+    expect(el.textContent).toContain("เปลี่ยนรหัสผ่าน");
+    expect(el.textContent).toContain("บันทึกการเปลี่ยนแปลง");
   });
 });

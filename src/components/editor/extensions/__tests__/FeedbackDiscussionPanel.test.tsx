@@ -7,6 +7,11 @@ import FeedbackDiscussionPanel, {
 } from "../FeedbackDiscussionPanel";
 import SuggestionChips from "../SuggestionChips";
 
+vi.mock("@/stores/language.store", () => ({
+  useLanguageStore: (selector: (s: { language: "en" | "th" }) => unknown) =>
+    selector({ language: "en" }),
+}));
+
 let container: HTMLDivElement | null = null;
 let root: Root | null = null;
 
@@ -160,5 +165,23 @@ describe("SuggestionChips", () => {
       chip.click();
     });
     expect(onPick).toHaveBeenCalledWith("ถามต่อเรื่องนี้");
+  });
+
+  it("uses horizontal scroll layout when layout is scroll", () => {
+    const el = render(
+      <SuggestionChips
+        suggestions={["chip one", "chip two"]}
+        onPick={() => {}}
+        layout="scroll"
+      />,
+    );
+    const row = el.querySelector("[data-testid='suggestion-chips']")!;
+    expect(row.getAttribute("data-layout")).toBe("scroll");
+    expect(row.className).toContain("overflow-x-auto");
+    expect(row.className).toContain("flex-nowrap");
+    const chips = el.querySelectorAll("[data-testid='suggestion-chips'] button");
+    chips.forEach((chip) => {
+      expect(chip.className).toContain("shrink-0");
+    });
   });
 });

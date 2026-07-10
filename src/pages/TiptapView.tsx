@@ -1,6 +1,7 @@
 import TiptapViewer from "@/components/editor/TiptapViewer";
 import { TopNav } from "@/components/TopNav";
 import { Button } from "@/components/ui/button";
+import { useAuthStore } from "@/stores/auth.store";
 import { useCanvasStore } from "@/stores/canvas.store";
 import { useAnswerStore } from "@/stores/content-answer.store";
 import { useLearningHistoryStore } from "@/stores/learningHistory.store";
