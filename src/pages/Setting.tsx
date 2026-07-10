@@ -1,27 +1,33 @@
+import { useState } from "react";
 import {
-  Bell,
-  Moon,
   Globe,
   Shield,
-  Trash2,
   HelpCircle,
   LogOut,
   ChevronRight,
+  Type,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useThemeStore } from "@/stores/theme.store";
 import { useAuthStore } from "@/stores/auth.store";
 import { useLanguageStore } from "@/stores/language.store";
+import {
+  useAppearanceStore,
+  FONT_SIZE_OPTIONS,
+} from "@/stores/appearance.store";
 import PersonalityPicker from "@/components/editor/extensions/PersonalityPicker";
-import { useTutorPersonalityStore } from "@/stores/tutorPersonality.store";
-
-interface SettingRow {
-  icon: React.ElementType;
-  label: string;
-  description: string;
-  destructive?: boolean;
-}
+import { useAppI18n } from "@/lib/i18n";
+import { OWNER_FACEBOOK_URL } from "@/lib/contact";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function Settings() {
   const { theme } = useThemeStore();
@@ -29,66 +35,11 @@ export default function Settings() {
   const logout = useAuthStore((s) => s.logout);
   const language = useLanguageStore((s) => s.language);
   const setLanguage = useLanguageStore((s) => s.setLanguage);
+  const fontSize = useAppearanceStore((s) => s.fontSize);
+  const setFontSize = useAppearanceStore((s) => s.setFontSize);
   const navigate = useNavigate();
-  const isThai = language === "th";
-  const t = (enText: string, thText: string) => (isThai ? thText : enText);
-
-  const sections: { heading: string; items: SettingRow[] }[] = [
-    {
-      heading: t("Preferences", "การตั้งค่า"),
-      items: [
-        {
-          icon: Bell,
-          label: t("Notifications", "การแจ้งเตือน"),
-          description: t("Push & email alerts", "การแจ้งเตือนผ่านแอปและอีเมล"),
-        },
-        {
-          icon: Moon,
-          label: t("Appearance", "หน้าตาแอป"),
-          description: "Theme, font size, display",
-        },
-      ],
-    },
-    {
-      heading: t("Account", "บัญชี"),
-      items: [
-        {
-          icon: Shield,
-          label: t("Privacy & Security", "ความเป็นส่วนตัวและความปลอดภัย"),
-          description: t("Password, 2FA, sessions", "รหัสผ่าน, 2FA, เซสชัน"),
-        },
-        {
-          icon: HelpCircle,
-          label: t("Help & Support", "ช่วยเหลือและสนับสนุน"),
-          description: t("FAQ, contact us", "คำถามที่พบบ่อย, ติดต่อเรา"),
-        },
-      ],
-    },
-    ...(token
-      ? [
-          {
-            heading: t("Danger zone", "โซนอันตราย"),
-            items: [
-              {
-                icon: LogOut,
-                label: t("Log out", "ออกจากระบบ"),
-                description: t("Sign out of your account", "ออกจากบัญชีของคุณ"),
-                destructive: true,
-              },
-              {
-                icon: Trash2,
-                label: t("Delete account", "ลบบัญชี"),
-                description: t(
-                  "Permanently remove your data",
-                  "ลบข้อมูลของคุณอย่างถาวร",
-                ),
-                destructive: true,
-              },
-            ],
-          },
-        ]
-      : []),
-  ];
+  const { isThai, t } = useAppI18n();
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -103,24 +54,58 @@ export default function Settings() {
       </p>
 
       <div className="mt-6 space-y-6">
+        {/* Appearance: theme + font size */}
         <div>
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {t("Appearance", "หน้าตาแอป")}
           </h2>
-          <div className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3">
-            <div>
-              <p className="text-sm font-medium text-foreground">
-                {t("Appearance", "หน้าตาแอป")}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {t("Current mode", "โหมดปัจจุบัน")}:{" "}
-                {theme === "dark" ? t("Dark", "มืด") : t("Light", "สว่าง")}
-              </p>
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
+            <div className="flex items-center justify-between px-4 py-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  {t("Theme", "ธีม")}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t("Current mode", "โหมดปัจจุบัน")}:{" "}
+                  {theme === "dark" ? t("Dark", "มืด") : t("Light", "สว่าง")}
+                </p>
+              </div>
+              <ThemeToggle />
             </div>
-            <ThemeToggle />
+
+            <div className="border-t border-border px-4 py-3">
+              <div className="flex items-center gap-3">
+                <Type className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {t("Font size", "ขนาดตัวอักษร")}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("Applies to the whole app", "มีผลกับตัวหนังสือทั้งแอป")}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 inline-flex flex-wrap gap-1 rounded-md border border-border p-1">
+                {FONT_SIZE_OPTIONS.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setFontSize(option.id)}
+                    className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                      fontSize === option.id
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-accent"
+                    }`}
+                  >
+                    {isThai ? option.labelTh : option.labelEn}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
+        {/* Language */}
         <div>
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {t("Language", "ภาษา")}
@@ -142,7 +127,7 @@ export default function Settings() {
                 type="button"
                 onClick={() => setLanguage("en")}
                 className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                  !isThai
+                  language === "en"
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-accent"
                 }`}
@@ -153,7 +138,7 @@ export default function Settings() {
                 type="button"
                 onClick={() => setLanguage("th")}
                 className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                  isThai
+                  language === "th"
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-accent"
                 }`}
@@ -164,6 +149,7 @@ export default function Settings() {
           </div>
         </div>
 
+        {/* AI Tutor personality */}
         <div>
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {t("AI Tutor", "AI ติวเตอร์")}
@@ -182,53 +168,116 @@ export default function Settings() {
           </div>
         </div>
 
-        {sections.map((section) => (
-          <div key={section.heading}>
+        {/* Account */}
+        <div>
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {t("Account", "บัญชี")}
+          </h2>
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
+            {token && (
+              <button
+                type="button"
+                onClick={() => navigate("/change-password")}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-accent"
+              >
+                <Shield className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground">
+                    {t("Password", "รหัสผ่าน")}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("Change your password", "เปลี่ยนรหัสผ่านของคุณ")}
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setHelpOpen(true)}
+              className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-accent ${
+                token ? "border-t border-border" : ""
+              }`}
+            >
+              <HelpCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-foreground">
+                  {t("Help & Support", "ช่วยเหลือและสนับสนุน")}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t("Contact & status", "ติดต่อเราและสถานะระบบ")}
+                </p>
+              </div>
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+            </button>
+          </div>
+        </div>
+
+        {/* Danger zone — logged-in only (Delete account returns with Tier 6.A) */}
+        {token && (
+          <div>
             <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {section.heading}
+              {t("Danger zone", "โซนอันตราย")}
             </h2>
             <div className="overflow-hidden rounded-lg border border-border bg-card">
-              {section.items.map((item, i) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={
-                    item.label === t("Log out", "ออกจากระบบ")
-                      ? handleLogout
-                      : undefined
-                  }
-                  className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-accent ${
-                    i > 0 ? "border-t border-border" : ""
-                  }`}
-                >
-                  <item.icon
-                    className={`h-4 w-4 shrink-0 ${
-                      item.destructive
-                        ? "text-destructive"
-                        : "text-muted-foreground"
-                    }`}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className={`text-sm font-medium ${
-                        item.destructive
-                          ? "text-destructive"
-                          : "text-foreground"
-                      }`}
-                    >
-                      {item.label}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {item.description}
-                    </p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-                </button>
-              ))}
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-accent"
+              >
+                <LogOut className="h-4 w-4 shrink-0 text-destructive" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-destructive">
+                    {t("Log out", "ออกจากระบบ")}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("Sign out of your account", "ออกจากบัญชีของคุณ")}
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </button>
             </div>
           </div>
-        ))}
+        )}
       </div>
+
+      {/* Help & Support popup */}
+      <AlertDialog open={helpOpen} onOpenChange={setHelpOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("Help & Support", "ช่วยเหลือและสนับสนุน")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t(
+                "Hot Potato is built and run for free by one person 😄 Found a bug or have an idea? Message me directly:",
+                "เว็บนี้ทำฟรีโดยคนคนเดียว 😄 เจอปัญหาหรือมีไอเดียอะไร ทักมาคุยกันได้เลย:",
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <a
+            href={OWNER_FACEBOOK_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm font-medium text-primary underline underline-offset-4"
+          >
+            {t("Message me on Facebook", "ทักแชทผ่าน Facebook")}
+          </a>
+          <p className="text-xs text-muted-foreground">
+            {t("Think the site is down?", "สงสัยว่าเว็บล่มไหม?")}{" "}
+            <Link
+              to="/status"
+              onClick={() => setHelpOpen(false)}
+              className="text-primary underline underline-offset-4"
+            >
+              {t("Check the status page", "เช็กหน้าสถานะระบบ")}
+            </Link>
+          </p>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("Close", "ปิด")}</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
