@@ -14,6 +14,7 @@ import {
 } from "./tutorApi";
 import AiErrorRetry from "./AiErrorRetry";
 import MarkdownMessage from "./MarkdownMessage";
+import SuggestionChips from "./SuggestionChips";
 import type { QuestionFeedbackMode } from "./questionMode";
 import { Eye, EyeOff, HelpCircle, SquareDashedMousePointer } from "lucide-react";
 import type { QuestionBlankWriteAttrs } from "./QuestionBlankWriteNode";
@@ -638,11 +639,22 @@ function ViewerView({ attrs }: { attrs: QuestionBlankWriteAttrs }) {
           )}
         </div>
       )}
+      {submitted && aiFeedback && !threadOpen && !isFeedbackLoading && (
+        <SuggestionChips
+          suggestions={suggestions}
+          disabled={isThreadLoading}
+          onPick={(text) => {
+            setThreadOpen(true);
+            void handleSendThreadMessage(text);
+          }}
+        />
+      )}
       {submitted && aiFeedback && (
         <FeedbackDiscussionPanel
           messages={feedbackThread}
           open={threadOpen}
           loading={isThreadLoading}
+          suggestions={suggestions}
           onToggle={() => {
             const next = !threadOpen;
             setThreadOpen(next);

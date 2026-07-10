@@ -21,6 +21,7 @@ import {
 } from "./tutorApi";
 import AiErrorRetry from "./AiErrorRetry";
 import MarkdownMessage from "./MarkdownMessage";
+import SuggestionChips from "./SuggestionChips";
 import BlockMoveControls from "./BlockMoveControls";
 import { useEditorI18n } from "../editor.i18n";
 
@@ -399,11 +400,22 @@ function ViewerView({ attrs }: ViewerViewProps) {
           )}
         </div>
       )}
+      {submitted && aiFeedback && !threadOpen && !isEvaluating && (
+        <SuggestionChips
+          suggestions={suggestions}
+          disabled={isThreadLoading}
+          onPick={(text) => {
+            setThreadOpen(true);
+            void handleSendThreadMessage(text);
+          }}
+        />
+      )}
       {submitted && aiFeedback && (
         <FeedbackDiscussionPanel
           messages={feedbackThread}
           open={threadOpen}
           loading={isThreadLoading}
+          suggestions={suggestions}
           onToggle={() => {
             const next = !threadOpen;
             setThreadOpen(next);
