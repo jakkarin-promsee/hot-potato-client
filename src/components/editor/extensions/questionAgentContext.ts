@@ -9,7 +9,12 @@
 export function getQuestionAgentViewportContext(
   container: HTMLElement,
 ): string {
+  // Clamp to the visual viewport: the container can be as tall as the whole
+  // lesson (the window is the scroller in the viewer), so intersecting with
+  // the raw container rect would match every node from the top.
   const containerRect = container.getBoundingClientRect();
+  const visibleTop = Math.max(containerRect.top, 0);
+  const visibleBottom = Math.min(containerRect.bottom, window.innerHeight);
   const nodes = Array.from(
     container.querySelectorAll(
       "h1, h2, h3, h4, h5, h6, p, li, blockquote, pre, [data-type]",
@@ -19,8 +24,7 @@ export function getQuestionAgentViewportContext(
   const lines: string[] = [];
   for (const node of nodes) {
     const rect = node.getBoundingClientRect();
-    const intersects =
-      rect.bottom >= containerRect.top && rect.top <= containerRect.bottom;
+    const intersects = rect.bottom >= visibleTop && rect.top <= visibleBottom;
     if (!intersects) continue;
     const text = node.textContent?.trim();
     if (!text) continue;

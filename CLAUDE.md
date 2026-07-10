@@ -170,7 +170,7 @@ Feedback verbosity is still controlled by `feedbackMode` (`quick_check` | `full_
 
 ### Editor UI shell
 
-`TipTapEditor.tsx` defines the layout (top bar, left/right sidebars, main area). `TiptapViewer.tsx` / `FabricCanvasReadOnly.tsx` render the read-only student view. Zoom is a single CSS `transform: scale()` on the container — custom nodes don't implement their own zoom. Toolbar items are `memo()`'d for performance; `dynamicUpdate` toggles "static mode" so they re-render with editor state when needed (details in `components/README.md`).
+`TipTapEditor.tsx` defines the layout (top bar, left/right sidebars, main area). `TiptapViewer.tsx` / `FabricCanvasReadOnly.tsx` render the read-only student view. Zoom is a single CSS `zoom` property on the card container (switched from `transform: scale()` on 2026-07-10: `zoom` scales layout height along with the visuals, which killed the double-scrollbar bug in the viewer) — custom nodes don't implement their own zoom. In the viewer the **window is the only vertical scroller**; `.editor-main` never overflows. Toolbar items are `memo()`'d for performance; `dynamicUpdate` toggles "static mode" so they re-render with editor state when needed (details in `components/README.md`).
 
 ## Persistence model (what the client sends)
 

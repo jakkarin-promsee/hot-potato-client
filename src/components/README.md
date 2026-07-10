@@ -73,4 +73,4 @@ This means the canvas state is always persisted in the Tiptap document, and `Can
     - **Live Mode** — uses standard `memo()` for best performance. Toolbar reflects state normally.
     - **Static Mode** — forces `memo()` to behave like a regular component, triggering re-renders when the editor state changes.
 
-- **Zoom** — implemented using a simple CSS `transform: scale(${zoom})` on the editor container. This means Tiptap and all custom nodes (including Fabric canvases) don't need to implement their own zoom logic.
+- **Zoom** — implemented using the CSS `zoom` property on the editor container (not `transform: scale()`: `zoom` scales the *layout* box along with the pixels, so the scroll extent always matches what's on screen — `transform` only scaled the pixels, which caused a second scrollbar / dead scroll space). Tiptap and all custom nodes (including Fabric canvases) still don't need to implement their own zoom logic.

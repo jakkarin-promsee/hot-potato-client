@@ -62,20 +62,27 @@
   border-radius: 4px;
 }
 
-/* Viewer override — collapses the sidebar columns */
+/* Viewer override — collapses the sidebar columns.
+   The window is the only vertical scroller here: the card is scaled with CSS
+   `zoom` (layout height == visual height), so .editor-main never overflows
+   vertically — it just grows the page. */
 .editor-layout--viewer {
   grid-template-columns: 1fr;
   grid-template-rows: 1fr;
-  height: 100%;
+  height: auto;
+  min-height: calc(100dvh - var(--app-nav-height, 56px));
 }
 
 .editor-layout--viewer .editor-main {
   grid-column: 1;
   grid-row: 1;
-}
-
-.editor-layout--viewer .editor-main {
-  width: 100vw;
+  /* Center the card even when it's wider than the viewport (the ±40px card
+     padding intentionally bleeds off-screen on phones) — flex centering clips
+     both edges equally, unlike mx-auto which left-aligns on overflow. */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
   overflow-x: hidden;
 }
 

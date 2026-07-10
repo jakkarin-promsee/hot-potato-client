@@ -171,29 +171,10 @@ function TiptapViewer({ onScrollDirectionChange }: TiptapViewerProps) {
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
-  // Detect reading direction on the scroll container itself.
-  useEffect(() => {
-    const el = mainRef.current;
-    if (!el || !onScrollDirectionChange) return;
-
-    let lastScrollTop = 0;
-    const MIN_DELTA = 6;
-
-    const onScroll = () => {
-      const current = el.scrollTop;
-      const delta = current - lastScrollTop;
-      if (Math.abs(delta) < MIN_DELTA) return;
-
-      onScrollDirectionChange(delta > 0 ? "down" : "up");
-      lastScrollTop = current;
-    };
-
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
-  }, [onScrollDirectionChange]);
-
-  // When scroll position is already at the top, scroll events do not fire for
-  // "scroll up" — but the user may still wheel/trackpad upward to reveal the nav.
+  // Reading direction (nav hide/show) is detected on the window scroll by
+  // TiptapView — the page is the only vertical scroller now that the card is
+  // scaled with CSS zoom. This wheel listener covers the one silent case:
+  // wheeling upward while already at the top fires no scroll event.
   useEffect(() => {
     const el = mainRef.current;
     if (!el || !onScrollDirectionChange) return;
@@ -332,16 +313,15 @@ function TiptapViewer({ onScrollDirectionChange }: TiptapViewerProps) {
   return (
     <div className="editor-layout editor-layout--viewer">
       <main ref={mainRef} className="editor-main">
+        {/* CSS `zoom` scales layout height along with the visuals, so the page
+            (window) is the single vertical scroller — .editor-main never
+            overflows. Horizontal centering comes from .editor-main (flex). */}
         <div
           style={{
-            width: `${CONTENT_WIDTH + CARD_PADDING * 2}px`, // 680px
-            transform: `scale(${zoom})`,
-            transformOrigin: "top left",
-            marginLeft: `calc((100vw - ${
-              CONTENT_WIDTH + CARD_PADDING * 2
-            }px * ${zoom}) / 2)`,
+            width: `${CONTENT_WIDTH + CARD_PADDING * 2}px`, // 480px
+            zoom,
           }}
-          className="w-fit mx-auto editor-card shadow-sm"
+          className="editor-card shadow-sm"
         >
           <div
             className="tiptap-editor tiptap-editor--viewer mx-auto py-10"

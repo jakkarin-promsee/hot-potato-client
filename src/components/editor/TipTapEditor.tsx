@@ -329,13 +329,12 @@ const TipTapEditor = () => {
         {/* ── CENTER EDITOR ── */}
         <main ref={mainRef} className="editor-main" onClick={handleEditorClick}>
           {/* Page Range (px <-> editor <-> px) */}
+          {/* CSS `zoom` scales layout height along with the visuals, so the
+              scroll extent of .editor-main always matches what's on screen
+              (transform: scale only scaled the pixels, not the layout). */}
           <div
             className="w-fit mx-auto px-6 editor-card shadow-sm"
-            style={{
-              transform: `scale(${zoom})`,
-              transformOrigin: "top center",
-              marginBottom: `calc((${zoom} - 1) * 100%)`,
-            }}
+            style={{ zoom }}
           >
             {/* Editor (default 400px) */}
             <div
