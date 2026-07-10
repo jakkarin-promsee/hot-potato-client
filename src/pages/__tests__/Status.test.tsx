@@ -39,7 +39,13 @@ function makeData(
     checks: {
       server: { status: "ok", uptime: "0h 5m 3s", environment: "test" },
       database: { status: "ok", connection: "connected", ready_state: 1 },
-      env: { status: "ok", variables: [{ key: "PORT", loaded: true }] },
+      env: {
+        status: "ok",
+        variables: [
+          { key: "MONGO_URI", loaded: true },
+          { key: "JWT_SECRET", loaded: true },
+        ],
+      },
       ...checksOverrides,
     },
   } as AllStatusResponse;
@@ -79,6 +85,8 @@ describe("Status page", () => {
     statusState.data = makeData();
     const el = render(<Status />);
     expect(el.textContent).toContain("Server");
+    expect(el.textContent).toContain("Server Environment");
+    expect(el.textContent).toContain("Client Environment");
     expect(el.textContent).not.toContain("AI Tutor");
     expect(el.textContent).not.toContain("Recent Errors");
   });

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useAppI18n } from "@/lib/i18n";
+import { getClientEnvCheck } from "@/lib/clientEnv";
 import { useStatusStore } from "@/stores/status.store";
 import type {
   AiCheck,
@@ -244,31 +245,22 @@ function DatabaseCard({ data }: { data: DatabaseCheck }) {
   );
 }
 
-function EnvCard({ data }: { data: EnvCheck }) {
-  const { t } = useAppI18n();
+function EnvVarsCard({
+  title,
+  data,
+  icon,
+}: {
+  title: string;
+  data: EnvCheck;
+  icon: React.ReactNode;
+}) {
   const loaded = data.variables.filter((v: EnvVar) => v.loaded).length;
   const total = data.variables.length;
 
   return (
     <div className="rounded-xl border border-[--color-border] bg-[--color-card] p-5 flex flex-col gap-4">
       <div className="flex items-start justify-between">
-        <SectionHeader
-          title={t("Environment", "สภาพแวดล้อม")}
-          icon={
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
-          }
-        />
+        <SectionHeader title={title} icon={icon} />
         <StatusBadge status={data.status} />
       </div>
 
@@ -283,7 +275,7 @@ function EnvCard({ data }: { data: EnvCheck }) {
           <div
             className="h-full rounded-full transition-all duration-700"
             style={{
-              width: `${(loaded / total) * 100}%`,
+              width: `${total === 0 ? 0 : (loaded / total) * 100}%`,
               background:
                 loaded === total ? "hsl(152 76% 48%)" : "hsl(38 92% 50%)",
             }}
@@ -338,6 +330,59 @@ function EnvCard({ data }: { data: EnvCheck }) {
         ))}
       </div>
     </div>
+  );
+}
+
+function ServerEnvCard({ data }: { data: EnvCheck }) {
+  const { t } = useAppI18n();
+
+  return (
+    <EnvVarsCard
+      title={t("Server Environment", "สภาพแวดล้อมเซิร์ฟเวอร์")}
+      data={data}
+      icon={
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        </svg>
+      }
+    />
+  );
+}
+
+function ClientEnvCard() {
+  const { t } = useAppI18n();
+  const data = getClientEnvCheck();
+
+  return (
+    <EnvVarsCard
+      title={t("Client Environment", "สภาพแวดล้อมไคลเอนต์")}
+      data={data}
+      icon={
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect width="20" height="14" x="2" y="3" rx="2" />
+          <line x1="8" x2="16" y1="21" y2="21" />
+          <line x1="12" x2="12" y1="17" y2="21" />
+        </svg>
+      }
+    />
   );
 }
 
@@ -460,13 +505,13 @@ function RecentErrorsCard({ data }: { data: ErrorsCheck }) {
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
-function Skeleton() {
+function Skeleton({ count = 3 }: { count?: number }) {
   return (
-    <div className="animate-pulse grid grid-cols-1 md:grid-cols-3 gap-4">
-      {[1, 2, 3].map((i) => (
+    <>
+      {Array.from({ length: count }, (_, i) => (
         <div
           key={i}
-          className="rounded-xl border border-[--color-border] bg-[--color-card] p-5 space-y-3"
+          className="animate-pulse rounded-xl border border-[--color-border] bg-[--color-card] p-5 space-y-3"
         >
           <div className="h-4 w-24 rounded bg-[--color-muted]" />
           <div className="h-px bg-[--color-border]" />
@@ -478,7 +523,7 @@ function Skeleton() {
           ))}
         </div>
       ))}
-    </div>
+    </>
   );
 }
 
@@ -645,12 +690,16 @@ export default function Status() {
         )}
 
         {loading && !data ? (
-          <Skeleton />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Skeleton />
+            <ClientEnvCard />
+          </div>
         ) : data && data.checks ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <ServerCard data={data.checks.server} />
             <DatabaseCard data={data.checks.database} />
-            <EnvCard data={data.checks.env} />
+            <ServerEnvCard data={data.checks.env} />
+            <ClientEnvCard />
             {data.checks.ai && <AiTutorCard data={data.checks.ai} />}
             {data.checks.errors && (
               <RecentErrorsCard data={data.checks.errors} />
@@ -658,18 +707,23 @@ export default function Status() {
           </div>
         ) : (
           !loading && (
-            <div className="py-20 text-center rounded-xl border border-dashed border-[--color-border]">
-              <p className="text-[--color-muted-foreground] text-sm font-mono">
-                {error
-                  ? t(
-                      "Connection lost. Reconnecting...",
-                      "การเชื่อมต่อหลุด กำลังเชื่อมต่อใหม่...",
-                    )
-                  : t(
-                      "No status data available.",
-                      "ยังไม่มีข้อมูลสถานะ",
-                    )}
-              </p>
+            <div className="space-y-4">
+              <div className="py-20 text-center rounded-xl border border-dashed border-[--color-border]">
+                <p className="text-[--color-muted-foreground] text-sm font-mono">
+                  {error
+                    ? t(
+                        "Connection lost. Reconnecting...",
+                        "การเชื่อมต่อหลุด กำลังเชื่อมต่อใหม่...",
+                      )
+                    : t(
+                        "No status data available.",
+                        "ยังไม่มีข้อมูลสถานะ",
+                      )}
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <ClientEnvCard />
+              </div>
             </div>
           )
         )}

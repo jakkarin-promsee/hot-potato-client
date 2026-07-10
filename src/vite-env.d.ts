@@ -10,7 +10,8 @@ declare module "axios" {
 
 interface ImportMetaEnv {
   readonly VITE_API_URL: string;
-  // add more VITE_ vars here as needed
+  readonly VITE_CLOUDINARY_CLOUD_NAME: string;
+  readonly VITE_CLOUDINARY_UPLOAD_PRESET: string;
 }
 
 interface ImportMeta {
