@@ -1,43 +1,67 @@
 import { useEffect, useRef } from "react";
+import { useAppI18n } from "@/lib/i18n";
 import { useStatusStore } from "@/stores/status.store";
 import type {
+  AiCheck,
   DatabaseCheck,
   EnvCheck,
   EnvVar,
+  ErrorsCheck,
   ServerCheck,
 } from "@/stores/status.store";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+type Translate = (english: string, thai: string) => string;
+
+function formatRelative(iso: string | null, t: Translate): string {
+  if (!iso) return "—";
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return t("just now", "เมื่อกี้นี้");
+  if (mins < 60) return t(`${mins}m ago`, `${mins} นาทีที่แล้ว`);
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return t(`${hrs}h ago`, `${hrs} ชม. ที่แล้ว`);
+  const days = Math.floor(hrs / 24);
+  return t(`${days}d ago`, `${days} วันที่แล้ว`);
+}
+
 function StatusBadge({
   status,
 }: {
-  status: "ok" | "error" | "degraded" | string;
+  status: "ok" | "error" | "degraded" | "unknown" | string;
 }) {
+  const { t } = useAppI18n();
   const map = {
     ok: {
       dot: "bg-emerald-400",
       text: "text-emerald-400",
       bg: "bg-emerald-400/10",
       border: "border-emerald-400/20",
-      label: "Operational",
+      label: t("Operational", "ปกติ"),
     },
     degraded: {
       dot: "bg-amber-400",
       text: "text-amber-400",
       bg: "bg-amber-400/10",
       border: "border-amber-400/20",
-      label: "Degraded",
+      label: t("Degraded", "มีปัญหา"),
     },
     error: {
       dot: "bg-red-500",
       text: "text-red-400",
       bg: "bg-red-500/10",
       border: "border-red-500/20",
-      label: "Error",
+      label: t("Error", "ผิดพลาด"),
     },
-  } as const;
-
+    unknown: {
+      dot: "bg-zinc-400",
+      text: "text-zinc-400",
+      bg: "bg-zinc-400/10",
+      border: "border-zinc-400/20",
+      label: t("Standby", "รอข้อมูล"),
+    },
+  };
   const style = map[status as keyof typeof map] ?? map.error;
 
   return (
@@ -93,14 +117,14 @@ function MetaRow({
 // ─── Cards ────────────────────────────────────────────────────────────────────
 
 function ServerCard({ data }: { data: ServerCheck }) {
-  // If data is somehow undefined here, the component won't crash
+  const { t } = useAppI18n();
   if (!data) return null;
 
   return (
     <div className="rounded-xl border border-[--color-border] bg-[--color-card] p-5 flex flex-col gap-4">
       <div className="flex items-start justify-between">
         <SectionHeader
-          title="Server"
+          title={t("Server", "เซิร์ฟเวอร์")}
           icon={
             <svg
               width="14"
@@ -165,11 +189,13 @@ function ServerCard({ data }: { data: ServerCheck }) {
 }
 
 function DatabaseCard({ data }: { data: DatabaseCheck }) {
+  const { t } = useAppI18n();
+
   return (
     <div className="rounded-xl border border-[--color-border] bg-[--color-card] p-5 flex flex-col gap-4">
       <div className="flex items-start justify-between">
         <SectionHeader
-          title="Database"
+          title={t("Database", "ฐานข้อมูล")}
           icon={
             <svg
               width="14"
@@ -219,6 +245,7 @@ function DatabaseCard({ data }: { data: DatabaseCheck }) {
 }
 
 function EnvCard({ data }: { data: EnvCheck }) {
+  const { t } = useAppI18n();
   const loaded = data.variables.filter((v: EnvVar) => v.loaded).length;
   const total = data.variables.length;
 
@@ -226,7 +253,7 @@ function EnvCard({ data }: { data: EnvCheck }) {
     <div className="rounded-xl border border-[--color-border] bg-[--color-card] p-5 flex flex-col gap-4">
       <div className="flex items-start justify-between">
         <SectionHeader
-          title="Environment"
+          title={t("Environment", "สภาพแวดล้อม")}
           icon={
             <svg
               width="14"
@@ -245,7 +272,6 @@ function EnvCard({ data }: { data: EnvCheck }) {
         <StatusBadge status={data.status} />
       </div>
 
-      {/* Progress bar */}
       <div>
         <div className="flex justify-between text-[10px] text-[--color-muted-foreground] mb-1.5 font-mono">
           <span>Variables loaded</span>
@@ -315,6 +341,123 @@ function EnvCard({ data }: { data: EnvCheck }) {
   );
 }
 
+function AiTutorCard({ data }: { data: AiCheck }) {
+  const { t } = useAppI18n();
+  return (
+    <div className="rounded-xl border border-[--color-border] bg-[--color-card] p-5 flex flex-col gap-4">
+      <div className="flex items-start justify-between">
+        <SectionHeader
+          title={t("AI Tutor", "ติวเตอร์ AI")}
+          icon={
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
+            </svg>
+          }
+        />
+        <StatusBadge status={data.status} />
+      </div>
+
+      <div>
+        <MetaRow
+          label={t("Last success", "สำเร็จล่าสุด")}
+          value={formatRelative(data.last_success, t)}
+          mono
+        />
+        <MetaRow
+          label={t("Last failure", "ล้มเหลวล่าสุด")}
+          value={formatRelative(data.last_failure, t)}
+          mono
+        />
+      </div>
+
+      {data.status === "unknown" && (
+        <p className="text-xs text-[--color-muted-foreground]">
+          {t(
+            "No AI calls since the last restart yet.",
+            "ยังไม่มีการเรียกใช้ AI ตั้งแต่รีสตาร์ตล่าสุด",
+          )}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function RecentErrorsCard({ data }: { data: ErrorsCheck }) {
+  const { t } = useAppI18n();
+  const shown = data.recent.slice(0, 6);
+  const more = data.recent.length - shown.length;
+
+  return (
+    <div className="rounded-xl border border-[--color-border] bg-[--color-card] p-5 flex flex-col gap-4">
+      <div className="flex items-start justify-between">
+        <SectionHeader
+          title={t("Recent Errors", "ข้อผิดพลาดล่าสุด")}
+          icon={
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          }
+        />
+        <StatusBadge status={data.count_since_boot === 0 ? "ok" : "degraded"} />
+      </div>
+
+      <MetaRow
+        label={t("Since last restart", "ตั้งแต่รีสตาร์ตล่าสุด")}
+        value={data.count_since_boot}
+        mono
+      />
+
+      {shown.length === 0 ? (
+        <p className="text-sm text-[--color-muted-foreground] text-center py-4">
+          {t("No errors 🎉", "ไม่มีข้อผิดพลาด 🎉")}
+        </p>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {shown.map((e, i) => (
+            <div
+              key={`${e.time}-${i}`}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[--color-muted] min-w-0"
+            >
+              <span className="text-[10px] font-mono text-[--color-muted-foreground] shrink-0">
+                {new Date(e.time).toLocaleTimeString()}
+              </span>
+              <span className="text-[10px] font-mono text-[--color-foreground] truncate flex-1 min-w-0">
+                {e.method} {e.route}
+              </span>
+              <span className="text-[10px] font-mono text-red-400 shrink-0">
+                {e.status}
+              </span>
+            </div>
+          ))}
+          {more > 0 && (
+            <p className="text-[10px] font-mono text-[--color-muted-foreground] text-center">
+              +{more}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 function Skeleton() {
@@ -342,6 +485,7 @@ function Skeleton() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function Status() {
+  const { t } = useAppI18n();
   const { data, loading, error, lastFetched, fetch } = useStatusStore();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -353,7 +497,6 @@ export default function Status() {
     };
   }, [fetch]);
 
-  // Logic to determine if the error is a connection failure
   const isNetworkError =
     error?.toLowerCase().includes("no response") ||
     error?.toLowerCase().includes("network");
@@ -377,21 +520,24 @@ export default function Status() {
   return (
     <div className="min-h-screen bg-[--color-background] px-4 py-10 transition-colors duration-500">
       <div className="max-w-5xl mx-auto space-y-8">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold text-[--color-foreground] tracking-tight">
-              System Status
+              {t("System Status", "สถานะระบบ")}
             </h1>
             <p className="text-sm text-[--color-muted-foreground] mt-0.5">
-              Real-time health of all services
+              {t(
+                "Real-time health of all services",
+                "สุขภาพของทุกระบบแบบเรียลไทม์",
+              )}
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             {lastFetched && (
               <span className="text-[10px] font-mono text-[--color-muted-foreground] bg-[--color-muted] px-2 py-1 rounded">
-                Last Check: {lastFetched.toLocaleTimeString()}
+                {t("Last Check", "เช็กล่าสุด")}:{" "}
+                {lastFetched.toLocaleTimeString()}
               </span>
             )}
             <button
@@ -412,12 +558,13 @@ export default function Status() {
                 <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
                 <path d="M21 3v5h-5" />
               </svg>
-              {loading ? "Checking..." : "Refresh Now"}
+              {loading
+                ? t("Checking...", "กำลังเช็ก...")
+                : t("Refresh Now", "รีเฟรช")}
             </button>
           </div>
         </div>
 
-        {/* Error Alert - Specific to "No Response" */}
         {error && (
           <div
             className={`rounded-xl border ${
@@ -454,8 +601,11 @@ export default function Status() {
                 }`}
               >
                 {isNetworkError
-                  ? "API Unreachable"
-                  : "System Communication Error"}
+                  ? t("API Unreachable", "ติดต่อ API ไม่ได้")
+                  : t(
+                      "System Communication Error",
+                      "การสื่อสารกับระบบผิดพลาด",
+                    )}
               </p>
               <p className="text-xs opacity-70 font-mono mt-0.5 uppercase tracking-tight">
                 {error}
@@ -465,12 +615,11 @@ export default function Status() {
               onClick={fetch}
               className="text-xs font-bold uppercase tracking-widest hover:underline"
             >
-              Retry
+              {t("Retry", "ลองใหม่")}
             </button>
           </div>
         )}
 
-        {/* Summary Banner (Only if we have data) */}
         {data && (
           <div
             className={`rounded-xl border border-[--color-border] bg-[--color-card] px-5 py-4 flex items-center justify-between ${overallStyle.glow}`}
@@ -480,13 +629,14 @@ export default function Status() {
               <div>
                 <p className="text-sm font-medium text-[--color-foreground]">
                   {overallStatus === "ok"
-                    ? "All systems operational"
+                    ? t("All systems operational", "ทุกระบบทำงานปกติ")
                     : overallStatus === "degraded"
-                    ? "Some systems degraded"
-                    : "System error detected"}
+                      ? t("Some systems degraded", "บางระบบมีปัญหา")
+                      : t("System error detected", "พบข้อผิดพลาดในระบบ")}
                 </p>
                 <p className="text-[11px] text-[--color-muted-foreground] font-mono mt-0.5">
-                  Server Timestamp: {new Date(data.timestamp).toLocaleString()}
+                  {t("Server Timestamp", "เวลาเซิร์ฟเวอร์")}:{" "}
+                  {new Date(data.timestamp).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -494,32 +644,43 @@ export default function Status() {
           </div>
         )}
 
-        {/* Replace your current logic with this safer version */}
         {loading && !data ? (
           <Skeleton />
-        ) : data && data.checks ? ( // Check for both data AND the nested checks object
+        ) : data && data.checks ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <ServerCard data={data.checks.server} />
             <DatabaseCard data={data.checks.database} />
             <EnvCard data={data.checks.env} />
+            {data.checks.ai && <AiTutorCard data={data.checks.ai} />}
+            {data.checks.errors && (
+              <RecentErrorsCard data={data.checks.errors} />
+            )}
           </div>
         ) : (
           !loading && (
             <div className="py-20 text-center rounded-xl border border-dashed border-[--color-border]">
               <p className="text-[--color-muted-foreground] text-sm font-mono">
                 {error
-                  ? "Connection lost. Reconnecting..."
-                  : "No status data available."}
+                  ? t(
+                      "Connection lost. Reconnecting...",
+                      "การเชื่อมต่อหลุด กำลังเชื่อมต่อใหม่...",
+                    )
+                  : t(
+                      "No status data available.",
+                      "ยังไม่มีข้อมูลสถานะ",
+                    )}
               </p>
             </div>
           )
         )}
 
-        {/* Footer */}
         <div className="flex items-center justify-center gap-4">
           <div className="h-px flex-1 bg-[--color-border]" />
           <p className="text-[10px] font-mono text-[--color-muted-foreground] whitespace-nowrap">
-            Polling every 30s • Real-time Monitoring
+            {t(
+              "Polling every 30s • Real-time Monitoring",
+              "รีเฟรชอัตโนมัติทุก 30 วินาที",
+            )}
           </p>
           <div className="h-px flex-1 bg-[--color-border]" />
         </div>

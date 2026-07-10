@@ -36,6 +36,26 @@ export interface EnvCheck {
   variables: EnvVar[];
 }
 
+export interface AiCheck {
+  status: "ok" | "degraded" | "unknown";
+  last_success: string | null;
+  last_failure: string | null;
+}
+
+export interface RecentError {
+  time: string;
+  method: string;
+  route: string;
+  status: number;
+}
+
+export interface ErrorsCheck {
+  count_since_boot: number;
+  last_error_at: string | null;
+  since: string;
+  recent: RecentError[];
+}
+
 export interface AllStatusResponse {
   status: "ok" | "degraded" | "error";
   timestamp: string;
@@ -43,6 +63,8 @@ export interface AllStatusResponse {
     server: ServerCheck;
     database: DatabaseCheck;
     env: EnvCheck;
+    ai?: AiCheck;
+    errors?: ErrorsCheck;
   };
 }
 
@@ -66,7 +88,9 @@ export const useStatusStore = create<StatusState>((set) => ({
   fetch: async () => {
     set({ loading: true, error: null });
     try {
-      const response = await api.get<AllStatusResponse>("/status/all");
+      const response = await api.get<AllStatusResponse>("/status/all", {
+        validateStatus: (s) => s === 200 || s === 503,
+      });
 
       // 1. Cast to unknown so we can safely check the type without TS interference
       const rawData = response.data as unknown;

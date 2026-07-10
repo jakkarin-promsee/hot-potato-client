@@ -86,7 +86,7 @@ Defined in `App.tsx` with three guard components. `BrowserRouter` + `QueryClient
 | `/change-password` | `ChangePassword` | `RequireLogin` | Security |
 | `/settings` | `Setting` | — | Settings |
 | `/uploadimage` | `Cloudinaryupload` | `ProtectedRoute` | Image upload tool |
-| `/status` | `Status` | — | System status |
+| `/status` | `Status` | — | System status (v2: AI health + recent errors cards, bilingual) |
 | `*` | `NotFound` | — | 404 |
 
 Routes under `/login … /settings` render inside `AppLayout` (shared nav chrome). The three guards:
