@@ -4,23 +4,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { useThemeStore } from "@/stores/theme.store";
-import { useAuthStore } from "@/stores/auth.store";
-import { useProfileStore } from "@/stores/profile.store";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { applyTransform, uploadImage } from "@/lib/cloudinary";
 import { useAppI18n } from "@/lib/i18n";
+import { useAuthStore } from "@/stores/auth.store";
+import { useProfileStore } from "@/stores/profile.store";
+import { TutorMemoryCard } from "@/components/TutorMemoryCard";
+import {
+  TUTOR_PERSONALITY_CATALOG,
+  useTutorPersonalityStore,
+} from "@/stores/tutorPersonality.store";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 
 export default function Profile() {
-  const { theme } = useThemeStore();
   const navigate = useNavigate();
-  const { t } = useAppI18n();
+  const { isThai, t } = useAppI18n();
   const user = useAuthStore((s) => s.user);
   const { profile, isLoading, isSaving, error, fetchProfile, saveProfile } =
     useProfileStore();
+
+  const personalityId = useTutorPersonalityStore((s) => s.personality);
+  const currentPersonality =
+    TUTOR_PERSONALITY_CATALOG.find((p) => p.id === personalityId) ??
+    TUTOR_PERSONALITY_CATALOG[0];
 
   const [name, setName] = useState("");
   const [nickname, setNickname] = useState("");
@@ -194,20 +201,6 @@ export default function Profile() {
 
       {/* Form */}
       <div className="mt-8 space-y-5">
-        <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2.5">
-          <div>
-            <p className="text-sm font-medium text-foreground">
-              {t("Theme", "ธีม")}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {theme === "dark"
-                ? t("Using dark mode", "ใช้โหมดมืด")
-                : t("Using light mode", "ใช้โหมดสว่าง")}
-            </p>
-          </div>
-          <ThemeToggle />
-        </div>
-
         <div className="space-y-1.5">
           <Label htmlFor="name" className="text-xs text-muted-foreground">
             {t("Display name", "ชื่อที่แสดง")}
@@ -292,6 +285,33 @@ export default function Profile() {
             {error}
           </p>
         )}
+      </div>
+
+      {/* Tutor section (Tier 3.B) */}
+      <div className="mt-10 space-y-4">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {t("Your AI tutor", "ติวเตอร์ของคุณ")}
+        </h2>
+
+        <div className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3">
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              {t("Tutor personality", "บุคลิกติวเตอร์")}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {currentPersonality.emoji}{" "}
+              {isThai ? currentPersonality.labelTh : currentPersonality.labelEn}
+            </p>
+          </div>
+          <Link
+            to="/settings"
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            {t("Change", "เปลี่ยน")}
+          </Link>
+        </div>
+
+        <TutorMemoryCard />
       </div>
     </div>
   );

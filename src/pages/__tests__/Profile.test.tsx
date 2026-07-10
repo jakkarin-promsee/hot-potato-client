@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createRoot, type Root } from "react-dom/client";
 import { act } from "react";
+import { MemoryRouter } from "react-router-dom";
 import Profile from "../Profile";
 
 const { profileState, mockFetchProfile, mockSaveProfile } = vi.hoisted(() => ({
@@ -41,18 +42,23 @@ vi.mock("@/stores/auth.store", () => ({
   },
 }));
 
-vi.mock("@/stores/theme.store", () => ({
-  useThemeStore: () => ({ theme: "light" }),
+vi.mock("@/stores/tutorPersonality.store", () => ({
+  TUTOR_PERSONALITY_CATALOG: [
+    { id: "default", labelTh: "น้องมันฝรั่งคลาสสิก", labelEn: "Classic", emoji: "🥔" },
+    { id: "gentle", labelTh: "สุภาพ อ่อนโยน", labelEn: "Gentle", emoji: "🌷" },
+  ],
+  useTutorPersonalityStore: (selector: (s: { personality: string }) => unknown) =>
+    selector({ personality: "gentle" }),
+}));
+
+vi.mock("@/components/TutorMemoryCard", () => ({
+  TutorMemoryCard: () => <div data-testid="tutor-memory-card" />,
 }));
 
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
   return { ...actual, useNavigate: () => vi.fn() };
 });
-
-vi.mock("@/components/ThemeToggle", () => ({
-  ThemeToggle: () => <div data-testid="theme-toggle" />,
-}));
 
 let container: HTMLDivElement | null = null;
 let root: Root | null = null;
@@ -91,7 +97,11 @@ beforeEach(() => {
 
 describe("Profile page", () => {
   it("populates fields from profile state", () => {
-    const el = render(<Profile />);
+    const el = render(
+      <MemoryRouter>
+        <Profile />
+      </MemoryRouter>,
+    );
     expect((el.querySelector("#name") as HTMLInputElement)?.value).toBe("Alice");
     expect((el.querySelector("#nickname") as HTMLInputElement)?.value).toBe("Nick");
     expect((el.querySelector("#bio") as HTMLTextAreaElement)?.value).toBe("Existing bio");
@@ -99,7 +109,11 @@ describe("Profile page", () => {
   });
 
   it("Save calls saveProfile with only changed fields", async () => {
-    const el = render(<Profile />);
+    const el = render(
+      <MemoryRouter>
+        <Profile />
+      </MemoryRouter>,
+    );
     const bio = el.querySelector("#bio") as HTMLTextAreaElement;
     const saveBtn = Array.from(el.querySelectorAll("button")).find((b) =>
       b.textContent?.includes("Save changes"),
@@ -115,10 +129,47 @@ describe("Profile page", () => {
 
   it("renders Thai copy when language is Thai", () => {
     language = "th";
-    const el = render(<Profile />);
+    const el = render(
+      <MemoryRouter>
+        <Profile />
+      </MemoryRouter>,
+    );
     expect(el.textContent).toContain("แตะเพื่อเปลี่ยนรูปโปรไฟล์");
     expect(el.textContent).toContain("ชื่อที่แสดง");
     expect(el.textContent).toContain("เปลี่ยนรหัสผ่าน");
     expect(el.textContent).toContain("บันทึกการเปลี่ยนแปลง");
+  });
+
+  it("does not render the Theme row", () => {
+    const el = render(
+      <MemoryRouter>
+        <Profile />
+      </MemoryRouter>,
+    );
+    const text = el.textContent ?? "";
+    expect(text).not.toContain("Theme");
+    expect(text).not.toContain("ธีม");
+    expect(el.querySelector('[data-testid="theme-toggle"]')).toBeNull();
+  });
+
+  it("shows personality shortcut with link to settings", () => {
+    const el = render(
+      <MemoryRouter>
+        <Profile />
+      </MemoryRouter>,
+    );
+    expect(el.textContent).toContain("Gentle");
+    expect(el.textContent).toContain("🌷");
+    const settingsLink = el.querySelector('a[href="/settings"]');
+    expect(settingsLink).not.toBeNull();
+  });
+
+  it("renders the tutor memory card stub", () => {
+    const el = render(
+      <MemoryRouter>
+        <Profile />
+      </MemoryRouter>,
+    );
+    expect(el.querySelector('[data-testid="tutor-memory-card"]')).not.toBeNull();
   });
 });

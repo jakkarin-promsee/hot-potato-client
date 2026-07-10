@@ -85,9 +85,9 @@ Defined in `App.tsx` with three guard components. `BrowserRouter` + `QueryClient
 | `/canvas/:id` | `TipTapCanvas` | `ProtectedRoute` | **The lesson editor** |
 | `/view/:id` | `TiptapView` | — | Public read-only lesson viewer (API uses optionalAuth) |
 | `/history` | `History` | `RequireLogin` | Recently opened lessons |
-| `/profile` | `Profile` | `RequireLogin` | Account — loads/saves via `GET/PUT /users/me/profile` (Tier 2.A) |
+| `/profile` | `Profile` | `RequireLogin` | Account — loads/saves via `GET/PUT /users/me/profile` (Tier 2.A) + tutor-memory card & personality shortcut (Tier 3.B) |
 | `/change-password` | `ChangePassword` | `RequireLogin` | Security |
-| `/settings` | `Setting` | — | Settings |
+| `/settings` | `Setting` | — | Settings (public; cleaned in Tier 3.A — theme, language, font size, personality, help popup; account rows only when logged in) |
 | `/uploadimage` | `Cloudinaryupload` | `ProtectedRoute` | Image upload tool |
 | `/status` | `Status` | — | System status (v2: AI health + recent errors cards, bilingual) |
 | `*` | `NotFound` | — | 404 |
@@ -116,6 +116,8 @@ Global stores in `src/stores/`. Each is a `create()` store; some use the `persis
 | `tutorPersonality.store` | Student tutor preset id (**persisted** as `tutor-personality-storage`); auto-attached on every `/chat/tutor` call |
 | `language.store` | UI language (Thai / English) |
 | `theme.store` | Light / dark theme |
+| `appearance.store` | App-wide font size (`small…xlarge`; persisted as `app-font-size`); applies `%` to `document.documentElement.style.fontSize` at module load — imported in `main.tsx` so it runs on every route. Separate mechanism from the viewer's CSS `zoom`; never merge them. |
+| `tutorMemory.store` | Student's tutor memory (`GET/DELETE /chat/memory`); normalizes the raw StudentMemory doc and strips internal fields (`tutor_personality`, ids, timestamps) |
 | `status.store` | System-status page data |
 
 `auth.store` is the source of truth for the token; `lib/axios.ts` reads it directly (outside React) to attach the `Bearer` header.
@@ -210,3 +212,4 @@ In production these are set in the Vercel dashboard, with `VITE_API_URL` pointin
 - **Editor state = the TipTap node attrs.** Never stash canvas/question data in React state or context expecting it to persist — it won't be saved. (See `components/README.md`.)
 - **Server cold starts (Render).** First call after idle is slow plus AI latency; always show loading UI for `/chat/*` and content loads.
 - `vercel.json` rewrites all paths to `index.html` (SPA). New client routes work automatically; no extra Vercel config needed.
+- **Font size vs viewer zoom.** The app-wide font-size control (`appearance.store`, inline `%` on `<html>`) and the lesson viewer's CSS `zoom` are deliberately separate mechanisms — don't merge them, and never use `transform: scale` (double-scrollbar bug). `--app-nav-height` stays px on purpose.
