@@ -22,6 +22,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { useAuthStore } from "@/stores/auth.store";
 import { useAppI18n } from "@/lib/i18n";
+import logo from "@/assets/logo.png";
 
 const publicNavItems = [
   { to: "/guide", icon: BookOpen, labelEn: "Guide", labelTh: "คู่มือ" },
@@ -52,11 +53,12 @@ export function TopNav() {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="container flex h-(--app-nav-height) items-center justify-between px-4">
-        <Link
-          to="/"
-          className="font-serif text-lg font-semibold tracking-tight text-foreground"
-        >
-          Intuita
+        <Link to="/" className="shrink-0">
+          <img
+            src={logo}
+            alt="Intuita"
+            className="h-8 w-8 object-contain"
+          />
         </Link>
 
         <div className="hidden items-center gap-2 md:flex">
