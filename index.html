@@ -1,19 +1,47 @@
 <!doctype html>
-<html lang="en">
+<html lang="th">
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="./src/assets/logo.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hot Potato</title>
+
+  <title>Hot Potato — เรียนรู้อย่างเข้าใจ กับติวเตอร์ AI</title>
+  <meta name="description"
+    content="Hot Potato — แพลตฟอร์มบทเรียนออนไลน์ที่คุณครูสร้างเอง พร้อมติวเตอร์ AI ใจดีคอยชวนคิด ชวนตั้งคำถาม ใช้ฟรีไม่ต้องเข้าสู่ระบบ" />
+
+  <!-- Open Graph — site-wide only. Per-lesson OG needs SSR/prerender (ROADMAP Tier 6.D); see client/CLAUDE.md. -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Hot Potato" />
+  <meta property="og:title" content="Hot Potato — เรียนรู้อย่างเข้าใจ กับติวเตอร์ AI" />
+  <meta property="og:description"
+    content="Hot Potato — แพลตฟอร์มบทเรียนออนไลน์ที่คุณครูสร้างเอง พร้อมติวเตอร์ AI ใจดีคอยชวนคิด ชวนตั้งคำถาม ใช้ฟรีไม่ต้องเข้าสู่ระบบ" />
+  <meta property="og:locale" content="th_TH" />
+  <!-- TODO(Tier 5 launch): make og:image + twitter:image ABSOLUTE with the production URL
+       (e.g. https://<prod-domain>/og-image.png) — Facebook's crawler does not resolve relative URLs reliably. -->
+  <meta property="og:image" content="/og-image.png" />
+  <meta property="og:image:width" content="584" />
+  <meta property="og:image:height" content="584" />
+
+  <!-- Twitter/X — "summary" (square) because the only art is the 584×584 logo. Upgrade to
+       summary_large_image only if a real 1200×630 card lands in public/. -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Hot Potato — เรียนรู้อย่างเข้าใจ กับติวเตอร์ AI" />
+  <meta name="twitter:description"
+    content="Hot Potato — แพลตฟอร์มบทเรียนออนไลน์ที่คุณครูสร้างเอง พร้อมติวเตอร์ AI ใจดีคอยชวนคิด ชวนตั้งคำถาม ใช้ฟรีไม่ต้องเข้าสู่ระบบ" />
+  <meta name="twitter:image" content="/og-image.png" />
+
+  <meta name="theme-color" content="#6444e4" />
+
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="apple-touch-icon" href="/favicon.png" />
 </head>
 
 <body>
   <div id="root"></div>
-  <script type="module" src="/src/main.jsx"></script>
+  <script type="module" src="/src/main.tsx"></script>
 </body>
 
 </html>

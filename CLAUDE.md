@@ -192,6 +192,13 @@ Create `client/.env` (git-ignored). Only `VITE_`-prefixed vars are exposed to th
 
 In production these are set in the Vercel dashboard, with `VITE_API_URL` pointing at the Render server.
 
+## SEO & link previews (Tier 0.A, 2026-07-10)
+
+- `index.html` carries the **site-wide** meta/OG/Twitter tags (Thai description; `og:image` → `/og-image.png`; `twitter:card = summary` because the only art is the square 584×584 logo). `public/robots.txt` allows all crawlers. `public/favicon.png` and `public/og-image.png` are copies of `src/assets/logo.png` served at stable root URLs — never point crawlers at `src/assets/*` (Vite fingerprints those paths, they change every build).
+- **Known limitation (deliberate):** this is a client-rendered SPA and social crawlers don't run JS, so **every `/view/:id` lesson link shares the same generic site card**. Real per-lesson OG tags need SSR/prerendering/edge functions — parked as ROADMAP Tier 6.D. Don't try to "fix" it inside `index.html`.
+- `og:image`/`twitter:image` are **root-relative until launch**. Tier 5 launch step: switch them to the absolute production URL and validate with the Facebook Sharing Debugger / LINE / Discord paste. `og:url` + canonical are also deferred to Tier 5 for the same reason.
+- The static `lang="th"` is the crawler-facing default; `language.store.ts` overwrites `document.documentElement.lang` at runtime when the user toggles language — both are correct, don't unify them.
+
 ## Gotchas
 
 - **`@` alias is mandatory** — relative deep imports break consistency; use `@/...`.
