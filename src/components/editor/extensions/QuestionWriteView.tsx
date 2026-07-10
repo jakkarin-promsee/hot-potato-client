@@ -20,6 +20,7 @@ import {
   feedbackThreadToClientThread,
 } from "./tutorApi";
 import AiErrorRetry from "./AiErrorRetry";
+import MarkdownMessage from "./MarkdownMessage";
 import BlockMoveControls from "./BlockMoveControls";
 import { useEditorI18n } from "../editor.i18n";
 
@@ -382,11 +383,18 @@ function ViewerView({ attrs }: ViewerViewProps) {
                 loading={isEvaluating}
               />
             </div>
+          ) : isEvaluating ? (
+            <p className="mt-1 text-base text-violet-900">
+              {t("AI is deeply evaluating your answer...", "AI กำลังวิเคราะห์คำตอบแบบละเอียด...")}
+            </p>
+          ) : aiFeedback ? (
+            <MarkdownMessage
+              text={aiFeedback}
+              className="mt-1 text-base text-violet-900"
+            />
           ) : (
-            <p className="mt-1 whitespace-pre-wrap text-base text-violet-900">
-              {isEvaluating
-                ? t("AI is deeply evaluating your answer...", "AI กำลังวิเคราะห์คำตอบแบบละเอียด...")
-                : aiFeedback || t("No evaluation yet", "ยังไม่มีผลวิเคราะห์")}
+            <p className="mt-1 text-base text-violet-900">
+              {t("No evaluation yet", "ยังไม่มีผลวิเคราะห์")}
             </p>
           )}
         </div>

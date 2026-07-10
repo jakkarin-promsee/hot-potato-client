@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { MessageCircle, SendHorizontal } from "lucide-react";
+import MarkdownMessage from "./MarkdownMessage";
 import { useEditorI18n } from "../editor.i18n";
 
 export interface FeedbackThreadMessage {
@@ -60,16 +61,16 @@ export default function FeedbackDiscussionPanel({
                   key={`${message.createdAt}-${index}`}
                   className={message.role === "student" ? "flex justify-end" : "flex justify-start"}
                 >
-                  <p
-                    className={[
-                      "max-w-[90%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm shadow-sm",
-                      message.role === "student"
-                        ? "rounded-br-md border border-violet-200 bg-violet-50 text-violet-900"
-                        : "rounded-bl-md border border-gray-200 bg-white text-gray-800",
-                    ].join(" ")}
-                  >
-                    {message.text}
-                  </p>
+                  {message.role === "student" ? (
+                    <p className="max-w-[90%] whitespace-pre-wrap rounded-2xl rounded-br-md border border-violet-200 bg-violet-50 px-3 py-2 text-sm text-violet-900 shadow-sm">
+                      {message.text}
+                    </p>
+                  ) : (
+                    <MarkdownMessage
+                      text={message.text}
+                      className="max-w-[90%] rounded-2xl rounded-bl-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm"
+                    />
+                  )}
                 </div>
               ))}
             </div>

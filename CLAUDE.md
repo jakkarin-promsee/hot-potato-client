@@ -165,6 +165,8 @@ Each `*Node.ts` defines the TipTap node (schema/attrs); each `*View.tsx` is its 
 
 Feedback verbosity is still controlled by `feedbackMode` (`quick_check` | `full_reflection`, see `questionMode.ts`).
 
+**Rendering tutor text:** every AI reply renders through `editor/extensions/MarkdownMessage.tsx` (react-markdown + remark-gfm, strict allowlist: bold/lists/inline code/blockquote/links; raw HTML skipped, images/tables dropped, headings downgraded to bold). Student text stays plain — never wrap student bubbles in it. The server side of the format story: persona `== FORMAT (STRICT) ==` + the `stripReportLabels` guard in `server/src/services/tutor/parse.ts` (added in Tier 0 Phase 0.B).
+
 ### Editor UI shell
 
 `TipTapEditor.tsx` defines the layout (top bar, left/right sidebars, main area). `TiptapViewer.tsx` / `FabricCanvasReadOnly.tsx` render the read-only student view. Zoom is a single CSS `transform: scale()` on the container — custom nodes don't implement their own zoom. Toolbar items are `memo()`'d for performance; `dynamicUpdate` toggles "static mode" so they re-render with editor state when needed (details in `components/README.md`).

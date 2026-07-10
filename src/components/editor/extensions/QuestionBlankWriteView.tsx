@@ -13,6 +13,7 @@ import {
   feedbackThreadToClientThread,
 } from "./tutorApi";
 import AiErrorRetry from "./AiErrorRetry";
+import MarkdownMessage from "./MarkdownMessage";
 import type { QuestionFeedbackMode } from "./questionMode";
 import { Eye, EyeOff, HelpCircle, SquareDashedMousePointer } from "lucide-react";
 import type { QuestionBlankWriteAttrs } from "./QuestionBlankWriteNode";
@@ -621,11 +622,18 @@ function ViewerView({ attrs }: { attrs: QuestionBlankWriteAttrs }) {
                 loading={isFeedbackLoading}
               />
             </div>
+          ) : isFeedbackLoading ? (
+            <p className="mt-1 text-base text-violet-900">
+              {t("AI is generating detailed feedback...", "AI กำลังเขียนคำแนะนำแบบละเอียดให้...")}
+            </p>
+          ) : aiFeedback ? (
+            <MarkdownMessage
+              text={aiFeedback}
+              className="mt-1 text-base text-violet-900"
+            />
           ) : (
             <p className="mt-1 text-base text-violet-900">
-              {isFeedbackLoading
-                ? t("AI is generating detailed feedback...", "AI กำลังเขียนคำแนะนำแบบละเอียดให้...")
-                : aiFeedback || t("No feedback yet", "ยังไม่มีคำแนะนำ")}
+              {t("No feedback yet", "ยังไม่มีคำแนะนำ")}
             </p>
           )}
         </div>

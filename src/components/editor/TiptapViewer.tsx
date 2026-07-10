@@ -13,6 +13,7 @@ import {
   qaHistoryToClientThread,
 } from "./extensions/tutorApi";
 import AiErrorRetry from "./extensions/AiErrorRetry";
+import MarkdownMessage from "./extensions/MarkdownMessage";
 
 const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 4.0;
@@ -406,9 +407,10 @@ function TiptapViewer({ onScrollDirectionChange }: TiptapViewerProps) {
                       </p>
                     </div>
                     <div className="flex justify-start">
-                      <p className="max-w-[90%] whitespace-pre-wrap rounded-2xl rounded-bl-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800">
-                        {msg.answer}
-                      </p>
+                      <MarkdownMessage
+                        text={msg.answer}
+                        className="max-w-[90%] rounded-2xl rounded-bl-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800"
+                      />
                     </div>
                   </div>
                 ))

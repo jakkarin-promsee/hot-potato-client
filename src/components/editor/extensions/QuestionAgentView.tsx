@@ -18,6 +18,7 @@ import {
   qaHistoryToClientThread,
 } from "./tutorApi";
 import AiErrorRetry from "./AiErrorRetry";
+import MarkdownMessage from "./MarkdownMessage";
 import BlockMoveControls from "./BlockMoveControls";
 import { useEditorI18n } from "../editor.i18n";
 
@@ -248,9 +249,10 @@ export default function QuestionAgentView({
                     </div>
                   </div>
                   <div className="flex justify-start -mt-1">
-                    <div className="max-w-[85%] rounded-2xl rounded-bl-md border border-gray-200 bg-gray-50 px-3 py-2 text-base text-gray-800 shadow-sm">
-                      {msg.answer}
-                    </div>
+                    <MarkdownMessage
+                      text={msg.answer}
+                      className="max-w-[85%] rounded-2xl rounded-bl-md border border-gray-200 bg-gray-50 px-3 py-2 text-base text-gray-800 shadow-sm"
+                    />
                   </div>
                 </div>
               ))}
@@ -297,9 +299,10 @@ export default function QuestionAgentView({
                   </p>
                 </div>
                 <div className="flex justify-start -mt-1">
-                  <p className="max-w-[85%] rounded-2xl rounded-bl-md border border-gray-200 bg-gray-50 px-3 py-2 text-base text-gray-800 shadow-sm">
-                    {latestMessage.answer}
-                  </p>
+                  <MarkdownMessage
+                    text={latestMessage.answer}
+                    className="max-w-[85%] rounded-2xl rounded-bl-md border border-gray-200 bg-gray-50 px-3 py-2 text-base text-gray-800 shadow-sm"
+                  />
                 </div>
               </div>
             ) : (
