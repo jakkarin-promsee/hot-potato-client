@@ -10,11 +10,12 @@ import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { NodeSelection } from "@tiptap/pm/state";
 import katex from "katex";
 import "katex/dist/katex.min.css";
-import { Eye, EyeOff, SquareDashedMousePointer } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { createFormulaRow } from "./formulaReducer";
 import { formulaToLatex } from "./formulaToLatex";
 import AiFormulaPanel from "./AiFormulaPanel";
 import BlockMoveControls from "../extensions/BlockMoveControls";
+import BlockDeleteButton from "../extensions/BlockDeleteButton";
 import {
   setActiveFormulaBlock,
   subscribeFormulaToolbarAction,
@@ -326,23 +327,7 @@ export default function FormulaCanvas({
                   <Eye className="h-3.5 w-3.5" />
                 )}
               </button>
-              <button
-                type="button"
-                onMouseDown={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  selectNode();
-                }}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  selectNode();
-                }}
-                className="flex h-6 w-6 items-center justify-center rounded text-slate-400 transition hover:bg-slate-200 hover:text-slate-700"
-                aria-label={t("Select formula block", "เลือกบล็อกสูตร")}
-              >
-                <SquareDashedMousePointer className="h-3.5 w-3.5" />
-              </button>
+              <BlockDeleteButton editor={editor} getPos={getPos} />
             </div>
           </div>
           {previewMode ? (

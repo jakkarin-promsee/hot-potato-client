@@ -18,9 +18,11 @@ import {
   caretInsertPoint,
   docEndPos,
   formatHeadingOptionLabel,
+  formatLessonMarkdownPreview,
   insertMarkdownAt,
   listHeadings,
   outlineSnapshot,
+  sectionEndInsertPos,
 } from "./draftHelpers";
 import { GRADE_LEVELS } from "./writingAssist";
 import { insertGeneratedQuestions } from "./questionInsert";
@@ -74,6 +76,9 @@ export default function AiDraftDialog({
   const [sectionQStatuses, setSectionQStatuses] = useState<PreviewCardStatus[]>(
     [],
   );
+  const [fillLoading, setFillLoading] = useState<"section" | "questions" | null>(
+    null,
+  );
 
   // Tab 3 — import
   const [rawText, setRawText] = useState("");
@@ -118,6 +123,7 @@ export default function AiDraftDialog({
   const handleFillSection = async () => {
     const heading = headings[headingIndex];
     if (!contentId || !heading) return;
+    setFillLoading("section");
     const result = await guard(() =>
       callCreator(contentId, "draft_section", {
         heading: heading.text.slice(0, 200),
@@ -125,6 +131,7 @@ export default function AiDraftDialog({
         styleHint: fillDetail.trim() ? fillDetail.trim().slice(0, 500) : undefined,
       }),
     );
+    setFillLoading(null);
     if (result) {
       setSectionResult(result.markdown);
       setSectionInserted(false);
@@ -139,6 +146,7 @@ export default function AiDraftDialog({
   const handleSectionQuestions = async () => {
     const heading = headings[headingIndex];
     if (!contentId || !heading || sectionResult === null) return;
+    setFillLoading("questions");
     const result = await guard(() =>
       callCreator(contentId, "generate_questions", {
         scope: "selection",
@@ -151,6 +159,7 @@ export default function AiDraftDialog({
         difficulty: "mixed",
       }),
     );
+    setFillLoading(null);
     if (result) {
       setSectionQuestions(result.questions);
       setSectionQStatuses(result.questions.map(() => "pending"));
@@ -305,7 +314,10 @@ export default function AiDraftDialog({
 
               {outlineResult !== null && !isLoading && (
                 <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
-                  <MarkdownMessage text={outlineResult} className="text-sm" />
+                  <MarkdownMessage
+                    text={formatLessonMarkdownPreview(outlineResult)}
+                    className="text-sm"
+                  />
                 </div>
               )}
 
@@ -371,6 +383,7 @@ export default function AiDraftDialog({
                         setSectionInserted(false);
                         setSectionQuestions(null);
                         setSectionQStatuses([]);
+                        setFillLoading(null);
                       }}
                       className="mt-1 block w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm font-normal text-foreground"
                     >
@@ -402,10 +415,13 @@ export default function AiDraftDialog({
                   </label>
 
                   {errorLine}
-                  {isLoading && loadingLine}
+                  {fillLoading === "section" && loadingLine}
 
-                  {sectionResult !== null && !isLoading && (
+                  {sectionResult !== null && (
                     <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                      <p className="mb-2 text-sm font-semibold text-foreground">
+                        {formatHeadingOptionLabel(headings[headingIndex])}
+                      </p>
                       <MarkdownMessage text={sectionResult} className="text-sm" />
                     </div>
                   )}
@@ -446,18 +462,33 @@ export default function AiDraftDialog({
 
                   {/* Suggested questions from the drafted section (3.5.G) */}
                   {sectionResult !== null && sectionQuestions === null && (
-                    <button
-                      type="button"
-                      onClick={() => void handleSectionQuestions()}
-                      disabled={isLoading || !contentId}
-                      className="flex items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-3 py-2 text-sm font-semibold text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      <Sparkles size={14} />
-                      {t(
-                        "Suggest questions from this section",
-                        "ให้ AI เสนอคำถามจากเนื้อหาส่วนนี้",
+                    <>
+                      {fillLoading === "questions" && (
+                        <p className="text-sm text-muted-foreground">
+                          {showColdStart
+                            ? t(
+                                "Waking the AI up, one sec…",
+                                "ปลุก AI แป๊บนึงนะ เซิร์ฟเวอร์เพิ่งตื่น 😴",
+                              )
+                            : t(
+                                "Thinking up questions…",
+                                "น้องมันฝรั่งกำลังคิดคำถาม… 🥔",
+                              )}
+                        </p>
                       )}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleSectionQuestions()}
+                        disabled={isLoading || !contentId}
+                        className="flex items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-3 py-2 text-sm font-semibold text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <Sparkles size={14} />
+                        {t(
+                          "Suggest questions from this section",
+                          "ให้ AI เสนอคำถามจากเนื้อหาส่วนนี้",
+                        )}
+                      </button>
+                    </>
                   )}
                   {sectionQuestions !== null && (
                     <>
@@ -470,7 +501,11 @@ export default function AiDraftDialog({
                           question={q}
                           status={sectionQStatuses[i]}
                           onAdd={() => {
-                            insertGeneratedQuestions(editor, [q]);
+                            insertGeneratedQuestions(editor, [q], sectionEndInsertPos(
+                              editor,
+                              headingIndex,
+                              listHeadings(editor),
+                            ));
                             setSectionQStatuses((prev) =>
                               prev.map((s, si) => (si === i ? "added" : s)),
                             );
@@ -534,7 +569,10 @@ export default function AiDraftDialog({
                     )}
                   </p>
                   <div className="max-h-64 overflow-y-auto rounded-lg border border-primary/30 bg-primary/5 p-3">
-                    <MarkdownMessage text={importResult.markdown} className="text-sm" />
+                    <MarkdownMessage
+                      text={formatLessonMarkdownPreview(importResult.markdown)}
+                      className="text-sm"
+                    />
                   </div>
                   <div className="flex gap-2">
                     {!importInserted ? (

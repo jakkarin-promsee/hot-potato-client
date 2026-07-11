@@ -130,4 +130,17 @@ describe("insertGeneratedQuestions", () => {
     insertGeneratedQuestions(editor, []);
     expect(chain.insertContentAt).not.toHaveBeenCalled();
   });
+
+  it("honours an explicit insert position (fill-tab section scope)", () => {
+    const { editor, chain } = fakeEditor();
+    insertGeneratedQuestions(
+      editor,
+      [{ type: "write", question: "q", guideAnswer: "a" }],
+      12,
+    );
+    expect(chain.insertContentAt).toHaveBeenCalledWith(
+      12,
+      expect.any(Array),
+    );
+  });
 });

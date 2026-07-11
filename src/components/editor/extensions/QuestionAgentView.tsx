@@ -6,7 +6,6 @@ import { useCanvasStore } from "@/stores/canvas.store";
 import {
   Bot,
   SendHorizontal,
-  SquareDashedMousePointer,
   Trash2,
   ChevronDown,
   ChevronUp,
@@ -22,6 +21,7 @@ import AiErrorRetry from "./AiErrorRetry";
 import MarkdownMessage from "./MarkdownMessage";
 import SuggestionChips from "./SuggestionChips";
 import BlockMoveControls from "./BlockMoveControls";
+import BlockDeleteButton from "./BlockDeleteButton";
 import { useAutoGrow } from "./useAutoGrow";
 import { useEditorI18n } from "../editor.i18n";
 
@@ -182,17 +182,7 @@ export default function QuestionAgentView({
 
             <div className="ml-auto flex items-center gap-1">
               <BlockMoveControls editor={editor} getPos={getPos} />
-              <button
-                type="button"
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  selectNode();
-                }}
-                className="flex h-6 w-6 items-center justify-center rounded text-gray-300 transition hover:bg-violet-100 hover:text-violet-500"
-                aria-label={t("Select block", "เลือกบล็อก")}
-              >
-                <SquareDashedMousePointer className="h-3.5 w-3.5" />
-              </button>
+              <BlockDeleteButton editor={editor} getPos={getPos} />
             </div>
           </div>
         )}

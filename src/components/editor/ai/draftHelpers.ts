@@ -2,6 +2,7 @@
  * Document helpers for the AI draft dialog (Tier 3.5.E).
  */
 import type { Editor } from "@tiptap/react";
+import { stripLeadingSectionNumber } from "../extensions/numberedSectionHeadings";
 
 /** True when the doc is a single empty paragraph (a brand-new lesson). */
 export function isDocEffectivelyEmpty(editor: Editor): boolean {
@@ -14,6 +15,8 @@ export function isDocEffectivelyEmpty(editor: Editor): boolean {
 export interface HeadingEntry {
   level: number;
   text: string;
+  /** Start position of the heading node in the doc. */
+  pos: number;
   /** Position right after the heading node — where section content goes. */
   insertPos: number;
   /** 1-based index for top-level H2 sections within the current H1 block. */
@@ -47,6 +50,7 @@ export function listHeadings(editor: Editor): HeadingEntry[] {
         headings.push({
           level: Number(node.attrs.level ?? 1),
           text,
+          pos,
           insertPos: pos + node.nodeSize,
           sectionNumber: sectionNumberByPos.get(pos) ?? null,
         });
@@ -64,6 +68,32 @@ export function formatHeadingOptionLabel(heading: HeadingEntry): string {
   }
   const indent = "–".repeat(Math.max(0, heading.level - 1));
   return indent ? `${indent} ${heading.text}` : heading.text;
+}
+
+/**
+ * Prepends auto `1. 2. 3.` to top-level `##` lines in AI markdown previews —
+ * mirrors the editor CSS counters (resets after each `#` H1 line). On insert,
+ * `numberedSectionHeadings` strips the manual prefix again.
+ */
+export function formatLessonMarkdownPreview(markdown: string): string {
+  let sectionNumber = 0;
+  return markdown
+    .split("\n")
+    .map((line) => {
+      if (/^###+\s/.test(line)) return line;
+      const h2 = line.match(/^##\s+(.+)$/);
+      if (h2) {
+        sectionNumber += 1;
+        const title = stripLeadingSectionNumber(h2[1]);
+        return `## ${sectionNumber}. ${title}`;
+      }
+      if (/^#\s+/.test(line)) {
+        sectionNumber = 0;
+        return line;
+      }
+      return line;
+    })
+    .join("\n");
 }
 
 /** Compact outline snapshot of the current doc for the draft_section prompt. */
@@ -112,4 +142,23 @@ export function insertMarkdownAt(
 
 export function docEndPos(editor: Editor): number {
   return editor.state.doc.content.size;
+}
+
+/**
+ * Where fill-tab question blocks should land: the end of the active section,
+ * right before the next heading at the same or higher outline level (or doc end).
+ */
+export function sectionEndInsertPos(
+  editor: Editor,
+  headingIndex: number,
+  headings: HeadingEntry[] = listHeadings(editor),
+): number {
+  const heading = headings[headingIndex];
+  if (!heading) return docEndPos(editor);
+  for (let i = headingIndex + 1; i < headings.length; i++) {
+    if (headings[i].level <= heading.level) {
+      return headings[i].pos;
+    }
+  }
+  return docEndPos(editor);
 }

@@ -19,6 +19,7 @@ import {
 import { createEditorExtensions } from "./config/editorExtensions";
 import AiDraftLauncher from "./ai/AiDraftLauncher";
 import { useEditorI18n } from "./editor.i18n";
+import { isSaveShortcut, saveLessonNow } from "./saveLesson";
 
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2.0;
@@ -33,8 +34,11 @@ const TipTapEditor = () => {
   >("text");
   const [zoom, setZoom] = useState(1.0);
   const mainRef = useRef<HTMLDivElement>(null);
+  const saveNowRef = useRef<() => void>(() => {
+    void saveLessonNow();
+  });
 
-  const { tiptapJson, setTiptapJson, saveContent } = useCanvasStore();
+  const { tiptapJson, setTiptapJson } = useCanvasStore();
 
   const conflict = useCanvasStore((s) => s.conflict);
   const forceSave = useCanvasStore((s) => s.forceSave);
@@ -144,6 +148,12 @@ const TipTapEditor = () => {
 
         return true;
       },
+      handleKeyDown(_view, event) {
+        if (!isSaveShortcut(event)) return false;
+        event.preventDefault();
+        saveNowRef.current();
+        return true;
+      },
     },
     content: "",
     onUpdate: ({ editor }) => {
@@ -164,16 +174,20 @@ const TipTapEditor = () => {
     }
   }, [editor, tiptapJson]);
 
-  // Ctrl+S manual save
+  useEffect(() => {
+    saveNowRef.current = () => {
+      void saveLessonNow(editor);
+    };
+  }, [editor]);
+
+  // Ctrl+S / Cmd+S — window capture catches header/sidebar focus too
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
-        e.preventDefault();
-        e.stopPropagation();
-        saveContent();
-      }
+      if (!isSaveShortcut(e)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      saveNowRef.current();
     };
-    // 👇 capture phase — fires BEFORE browser handles it
     window.addEventListener("keydown", onKeyDown, { capture: true });
     return () =>
       window.removeEventListener("keydown", onKeyDown, { capture: true });

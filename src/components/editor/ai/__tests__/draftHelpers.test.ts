@@ -7,10 +7,12 @@ import type { Editor as ReactEditor } from "@tiptap/react";
 import {
   docEndPos,
   formatHeadingOptionLabel,
+  formatLessonMarkdownPreview,
   insertMarkdownAt,
   isDocEffectivelyEmpty,
   listHeadings,
   outlineSnapshot,
+  sectionEndInsertPos,
 } from "../draftHelpers";
 
 function makeEditor(content: string): Editor {
@@ -81,6 +83,59 @@ describe("listHeadings / outlineSnapshot", () => {
   it("skips empty headings", () => {
     const editor = makeEditor("<h2></h2><h2>จริง</h2>");
     expect(listHeadings(asReact(editor)).map((h) => h.text)).toEqual(["จริง"]);
+    editor.destroy();
+  });
+});
+
+describe("formatLessonMarkdownPreview", () => {
+  it("numbers top-level ## headings and resets after each # H1", () => {
+    const raw = [
+      "## บทนำ",
+      "*สรุป*",
+      "## แรงและการเคลื่อนที่",
+      "# บทที่สอง",
+      "## เปิดเรื่อง",
+    ].join("\n");
+    expect(formatLessonMarkdownPreview(raw)).toBe(
+      [
+        "## 1. บทนำ",
+        "*สรุป*",
+        "## 2. แรงและการเคลื่อนที่",
+        "# บทที่สอง",
+        "## 1. เปิดเรื่อง",
+      ].join("\n"),
+    );
+  });
+
+  it("strips an existing manual prefix before re-numbering", () => {
+    expect(formatLessonMarkdownPreview("## 3. เก่า")).toBe("## 1. เก่า");
+  });
+
+  it("leaves ### headings untouched", () => {
+    expect(formatLessonMarkdownPreview("### ย่อย")).toBe("### ย่อย");
+  });
+});
+
+describe("sectionEndInsertPos", () => {
+  it("returns the next same-or-higher-level heading, not the doc end", () => {
+    const editor = makeEditor(
+      "<h2>หนึ่ง</h2><p>เนื้อหา</p><h2>สอง</h2><p>ท้าย</p>",
+    );
+    const headings = listHeadings(asReact(editor));
+    const endOfFirst = sectionEndInsertPos(asReact(editor), 0, headings);
+    expect(endOfFirst).toBe(headings[1].pos);
+    expect(endOfFirst).toBeLessThan(docEndPos(asReact(editor)));
+    editor.destroy();
+  });
+
+  it("stops at the next subsection when the active heading is H3", () => {
+    const editor = makeEditor(
+      "<h2>ใหญ่</h2><h3>ย่อย</h3><p>ใน</p><h3>ถัดไป</h3><h2>ใหญ่สอง</h2>",
+    );
+    const headings = listHeadings(asReact(editor));
+    expect(sectionEndInsertPos(asReact(editor), 1, headings)).toBe(
+      headings[2].pos,
+    );
     editor.destroy();
   });
 });

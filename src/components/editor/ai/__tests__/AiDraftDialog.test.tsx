@@ -37,7 +37,7 @@ vi.mock("@/stores/canvas.store", () => ({
 
 import AiDraftDialog from "../AiDraftDialog";
 import AiDraftLauncher from "../AiDraftLauncher";
-import { listHeadings } from "../draftHelpers";
+import { listHeadings, sectionEndInsertPos } from "../draftHelpers";
 
 let container: HTMLDivElement | null = null;
 let root: Root | null = null;
@@ -171,6 +171,8 @@ describe("AiDraftDialog — outline tab", () => {
     });
     // Preview shown, doc still empty (T2)
     expect(ed.state.doc.textContent).toBe("");
+    expect(dialog.textContent).toContain("1. บทนำ");
+    expect(dialog.textContent).toContain("2. แรงและการเคลื่อนที่");
 
     act(() => {
       findButton(dialog, "Insert into lesson").click();
@@ -232,6 +234,7 @@ describe("AiDraftDialog — fill tab", () => {
     await act(async () => {
       findButton(dialog, "Write this section").click();
     });
+    expect(dialog.textContent).toContain("1. บทนำ");
     expect(mockCallCreator).toHaveBeenCalledWith("content-1", "draft_section", {
       heading: "บทนำ",
       outlineMarkdown: "## บทนำ\n## สรุป",
@@ -271,10 +274,13 @@ describe("AiDraftDialog — fill tab", () => {
       styleHint: "เน้นการทดลองสั้น ๆ",
     });
 
-    // The questions flow: generate from the fresh section text, preview-first
     mockCallCreator.mockResolvedValueOnce({
       questions: [
-        { type: "write", question: "ทำไมผลการทดลองเป็นแบบนี้", guideAnswer: "แนวเฉลย" },
+        {
+          type: "write",
+          question: "ทำไมผลการทดลองเป็นแบบนี้",
+          guideAnswer: "แนวเฉลย",
+        },
       ],
     });
     await act(async () => {
@@ -298,6 +304,19 @@ describe("AiDraftDialog — fill tab", () => {
       findButton(dialog, "Add to lesson").click();
     });
     expect(mockInsertQuestions).toHaveBeenCalledTimes(1);
+    const [, accepted, insertPos] = mockInsertQuestions.mock.calls[0];
+    expect(accepted).toEqual([
+      {
+        type: "write",
+        question: "ทำไมผลการทดลองเป็นแบบนี้",
+        guideAnswer: "แนวเฉลย",
+      },
+    ]);
+    expect(typeof insertPos).toBe("number");
+    const headings = listHeadings(ed as unknown as ReactEditor);
+    expect(insertPos).toBe(
+      sectionEndInsertPos(ed as unknown as ReactEditor, 0, headings),
+    );
   });
 
   it("shows the empty-state hint when the doc has no headings", () => {

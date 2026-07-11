@@ -20,6 +20,7 @@ import PublishSettingsModal from "./PublishSettingsModal";
 import AiWritingAssistant from "./ai/AiWritingAssistant";
 import AiCriticButton from "./ai/AiCriticButton";
 import { useEditorI18n } from "./editor.i18n";
+import { saveLessonNow } from "./saveLesson";
 
 const IconBtn = memo(
   ({
@@ -80,7 +81,6 @@ const EditorHeader = memo(
     const isSaving = useCanvasStore((s) => s.isSaving);
     const isDirty = useCanvasStore((s) => s.isDirty);
     const setTitle = useCanvasStore((s) => s.setTitle);
-    const saveContent = useCanvasStore((s) => s.saveContent);
     const { isThai } = useEditorI18n();
 
     const handleTitleChange = useCallback(
@@ -92,8 +92,8 @@ const EditorHeader = memo(
 
     // Wire real save to save button
     const handleSave = useCallback(() => {
-      saveContent(); // ✅ was empty before
-    }, [saveContent]);
+      void saveLessonNow(editor);
+    }, [editor]);
 
     useEffect(() => {
       if (!zoomInputFocused) setZoomInputValue(String(Math.round(zoom * 100)));
@@ -228,7 +228,7 @@ const EditorHeader = memo(
               {!isSaving && isDirty && (
                 <button
                   onClick={handleSave}
-                  title={isThai ? "บันทึก" : "Save"}
+                  title={isThai ? "บันทึก (Ctrl+S)" : "Save (Ctrl+S)"}
                   className="flex items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:bg-accent text-muted-foreground"
                 >
                   <Save size={12} />

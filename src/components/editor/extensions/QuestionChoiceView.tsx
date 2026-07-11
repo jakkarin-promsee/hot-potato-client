@@ -9,6 +9,7 @@ import FeedbackDiscussionPanel, {
 import QuestionFeedbackModeToggle from "./QuestionFeedbackModeToggle";
 import type { QuestionFeedbackMode } from "./questionMode";
 import BlockMoveControls from "./BlockMoveControls";
+import BlockDeleteButton from "./BlockDeleteButton";
 import { useColdStartHint } from "@/hooks/useColdStartHint";
 import {
   AiUnavailableError,
@@ -28,7 +29,6 @@ import {
   Plus,
   HelpCircle,
   Sparkles,
-  SquareDashedMousePointer,
   Eye,
   EyeOff,
   Check,
@@ -987,17 +987,7 @@ export default function QuestionChoiceView({
                 )}
               </button>
 
-              <button
-                type="button"
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  selectNode();
-                }}
-                className="flex h-6 w-6 items-center justify-center rounded text-gray-300 transition hover:bg-violet-100 hover:text-violet-500"
-                aria-label={t("Select block", "เลือกบล็อก")}
-              >
-                <SquareDashedMousePointer className="h-3.5 w-3.5" />
-              </button>
+              <BlockDeleteButton editor={editor} getPos={getPos} />
             </div>
           </div>
         )}

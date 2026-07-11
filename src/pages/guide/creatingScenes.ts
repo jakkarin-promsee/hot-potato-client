@@ -3,8 +3,11 @@ import type { GuideScene } from "./scenes";
 // creating-showcase — the teacher walkthrough (plan/guide.md §5, 10 scenes).
 // The spine follows the editor's own AI-hub numbering (start → write → questions
 // → publish) so the guide teaches the same mental model as the sidebar. Button
-// names are quoted verbatim from the UI. Screenshots are desktop (the editor is
-// desktop-only), captured by scripts/capture-guide.mjs — every scene is `wide`.
+// names are quoted verbatim from the UI. Every step carries a location cue
+// ("แถบซ้าย", "มุมขวาบนของบล็อก", …) so a first-timer can find each control —
+// the editor's 4 regions are established in scene-3 and referenced after.
+// Screenshots are desktop (the editor is desktop-only), captured by
+// scripts/capture-guide.mjs — every scene is `wide`.
 
 export const CREATING_SCENES: GuideScene[] = [
   {
@@ -13,16 +16,16 @@ export const CREATING_SCENES: GuideScene[] = [
     title: { th: "เตรียมตัวก่อนสร้าง", en: "Before you start" },
     steps: [
       {
-        th: "สมัคร/เข้าสู่ระบบก่อน (ฟรี ทุกบัญชีสร้างบทเรียนได้ ไม่ต้องขอสิทธิ์พิเศษ)",
-        en: "Sign up or log in first (free — every account can create lessons).",
+        th: "สมัคร/เข้าสู่ระบบก่อน — ปุ่มเข้าสู่ระบบอยู่ที่แถบเมนูบนสุดของเว็บ มุมขวาบน (ฟรี ทุกบัญชีสร้างบทเรียนได้ ไม่ต้องขอสิทธิ์พิเศษ)",
+        en: "Sign up or log in first — the login button is in the site's top menu bar, top-right corner (free — every account can create lessons).",
       },
       {
         th: "⚠️ หน้าสร้างบทเรียนใช้บน “คอมพิวเตอร์” เท่านั้น — มือถือเปิดอ่านบทเรียนได้ แต่แก้ไขไม่ได้",
         en: "⚠️ The editor is desktop-only — phones can read lessons but not edit them.",
       },
       {
-        th: "กดเมนู “สร้าง” บนแถบด้านบน จะเข้าหน้ารวมบทเรียนของเรา (“เนื้อหาของคุณ”)",
-        en: "Tap “Create” in the top bar to reach your lessons list (“Your Content”).",
+        th: "กดเมนู “สร้าง” ที่แถบเมนูบนสุดของเว็บ (บนสุดของจอ) จะเข้าหน้ารวมบทเรียนของเรา (“เนื้อหาของคุณ”)",
+        en: "Tap “Create” in the site's top menu bar (very top of the screen) to reach your lessons list (“Your Content”).",
       },
     ],
     images: [
@@ -38,21 +41,21 @@ export const CREATING_SCENES: GuideScene[] = [
     title: { th: "สร้างบทเรียนแรก", en: "Create your first lesson" },
     steps: [
       {
-        th: "กดปุ่ม “สร้างบทเรียนใหม่” — ได้บทเรียนว่างทันที ไม่ต้องกรอกชื่อหรือคำอธิบายก่อน",
-        en: "Hit “New Lesson” — you get a blank lesson instantly, no upfront form.",
+        th: "กดปุ่ม “สร้างบทเรียนใหม่” (ปุ่มมุมขวาบนของหน้า “เนื้อหาของคุณ”) — ได้บทเรียนว่างทันที ไม่ต้องกรอกชื่อหรือคำอธิบายก่อน",
+        en: "Hit “New Lesson” (the top-right button on the “Your Content” page) — you get a blank lesson instantly, no upfront form.",
       },
       {
         th: "ระบบพาเข้าหน้า editor อัตโนมัติ (ชื่อเรื่อง คำอธิบาย ปก ค่อยใส่ตอนเผยแพร่)",
         en: "It opens the editor for you (title, description, cover come later at publish).",
       },
       {
-        th: "หน้าว่างมีการ์ด “ให้ AI ช่วยเริ่ม” ถ้ายังไม่รู้จะเริ่มยังไง กดได้เลย",
-        en: "A blank page shows a “Let AI help” card — tap it if you're not sure where to start.",
+        th: "หน้าว่างมีการ์ด “ให้ AI ช่วยเริ่ม” อยู่กลางหน้ากระดาษ ถ้ายังไม่รู้จะเริ่มยังไง กดได้เลย",
+        en: "A blank page shows a “Let AI help” card in the middle of the page — tap it if you're not sure where to start.",
       },
     ],
     tip: {
-      th: "งานไม่หาย — ระบบบันทึกให้อัตโนมัติทุก 30 วินาที และมีปุ่มย้อนกลับ/ทำซ้ำเสมอ",
-      en: "Nothing gets lost — it autosaves every 30 seconds and Undo/Redo is always there.",
+      th: "งานไม่หาย — ระบบบันทึกให้อัตโนมัติทุก 30 วินาที และมีปุ่มย้อนกลับ/ทำซ้ำที่แถบบนสุดเสมอ",
+      en: "Nothing gets lost — it autosaves every 30 seconds, and Undo/Redo sits in the top bar.",
     },
     images: [
       {
@@ -67,16 +70,16 @@ export const CREATING_SCENES: GuideScene[] = [
     title: { th: "รู้จักหน้าจอ 4 ส่วน", en: "The 4 regions of the editor" },
     steps: [
       {
-        th: "บนสุด: ชื่อเรื่อง · สถานะบันทึก · ย้อนกลับ/ทำซ้ำ · ซูม · ตรวจบทเรียน · ปุ่ม “เผยแพร่”",
-        en: "Top: title · save status · undo/redo · zoom · review · the “Publish” button.",
+        th: "แถบบนสุดของจอ: ชื่อเรื่อง · สถานะบันทึก · ย้อนกลับ/ทำซ้ำ · ซูม · ตรวจบทเรียน · ปุ่ม “เผยแพร่” (ขวาสุด)",
+        en: "The top bar: title · save status · undo/redo · zoom · review · the “Publish” button (far right).",
       },
       {
-        th: "ซ้าย: 5 หมวดเครื่องมือ (AI นำหน้าเสมอ) — AI · ข้อความ · สื่อ · สูตร · คำถาม",
-        en: "Left: 5 tool categories (AI leads) — AI · Text · Media · Formula · Question.",
+        th: "แถบเครื่องมือด้านซ้าย (ซ้ายสุดของจอ): 5 หมวดเรียงบนลงล่าง — AI (บนสุด) · ข้อความ · สื่อ · สูตร · คำถาม",
+        en: "The left toolbar (far-left edge): 5 categories top-to-bottom — AI (topmost) · Text · Media · Formula · Question.",
       },
       {
-        th: "กลาง: “กระดาษ” ของเรา — พิมพ์บทเรียนตรงนี้ · ขวา: คุณสมบัติของสิ่งที่เลือกอยู่",
-        en: "Center: your page — type the lesson here · Right: properties of whatever you selected.",
+        th: "ตรงกลาง: “กระดาษ” ของเรา — พิมพ์บทเรียนตรงนี้ · แถบด้านขวา: แผงคุณสมบัติของสิ่งที่เลือกอยู่",
+        en: "Center: your page — type the lesson here · the right panel: properties of whatever you've selected.",
       },
       {
         th: "ระบบบันทึกให้เองทุก 30 วิ (กด Ctrl+S ได้ถ้าใจร้อน)",
@@ -96,15 +99,15 @@ export const CREATING_SCENES: GuideScene[] = [
     title: { th: "เขียนเนื้อหา", en: "Write the content" },
     steps: [
       {
-        th: "บรรทัดแรกคือ “ชื่อเรื่อง” (H1) · หัวข้อใหญ่ใช้ “หัวข้อ 2” แล้วเลข 1. 2. 3. จะมาเอง",
-        en: "The first line is the Title (H1) · use Heading 2 for sections — 1. 2. 3. numbering is automatic.",
+        th: "บรรทัดแรกบนกระดาษคือ “ชื่อเรื่อง” (H1) · หัวข้อใหญ่ใช้ “หัวข้อ 2” แล้วเลข 1. 2. 3. จะมาเอง",
+        en: "The first line on the page is the Title (H1) · use Heading 2 for sections — 1. 2. 3. numbering is automatic.",
       },
       {
-        th: "แผง “ข้อความ” ด้านซ้าย: โครงสร้าง · จัดวาง · สี · ไฮไลต์ · ลิสต์ · ตาราง · เช็กลิสต์",
-        en: "The Text panel on the left: structure · alignment · color · highlight · lists · tables · checklists.",
+        th: "แผง “ข้อความ” ที่แถบซ้าย (หมวดที่ 2 จากบน): โครงสร้าง · จัดวาง · สี · ไฮไลต์ · ลิสต์ · ตาราง · เช็กลิสต์",
+        en: "The Text panel on the left rail (2nd category from the top): structure · alignment · color · highlight · lists · tables · checklists.",
       },
       {
-        th: "เลือกคลุมข้อความ แล้วแผงขวาจะมี ตัวหนา/เอียง/ขีดเส้นใต้/ลิงก์ + “ค้นหาและแทนที่”",
+        th: "เลือกคลุมข้อความ แล้วแผงด้านขวาจะมี ตัวหนา/เอียง/ขีดเส้นใต้/ลิงก์ + “ค้นหาและแทนที่”",
         en: "Select text and the right panel offers bold/italic/underline/link + Search & Replace.",
       },
     ],
@@ -121,11 +124,11 @@ export const CREATING_SCENES: GuideScene[] = [
     title: { th: "แทรกรูปในบทเรียน", en: "Insert images into your lesson" },
     steps: [
       {
-        th: "แผง “สื่อ”: อัปโหลดจากเครื่อง/URL หรือคลิกรูปจากคลังภาพ (ลากรูปมาวางในเอกสารก็ได้)",
-        en: "The Media panel: upload from device/URL, or click an image from your vault (drag-drop works too).",
+        th: "แผง “สื่อ” ที่แถบซ้าย (หมวดที่ 3): อัปโหลดจากเครื่อง/URL หรือคลิกรูปจากคลังภาพ (ลากรูปมาวางบนกระดาษก็ได้)",
+        en: "The Media panel on the left rail (3rd category): upload from device/URL, or click an image from your vault (drag-drop onto the page works too).",
       },
       {
-        th: "คลิกรูปแล้วครอป/ย่อขยาย/จัดวางได้จากแผงขวา · คลังภาพเต็มๆ อยู่ที่หน้า “จัดการคลังภาพ”",
+        th: "คลิกรูปแล้วครอป/ย่อขยาย/จัดวางได้จากแผงด้านขวา · คลังภาพเต็มๆ อยู่ที่หน้า “จัดการคลังภาพ”",
         en: "Click an image to crop/resize/align from the right panel · the full vault lives under “Manage gallery”.",
       },
     ],
@@ -142,8 +145,8 @@ export const CREATING_SCENES: GuideScene[] = [
     title: { th: "สูตรคณิต — ไม่ต้องรู้ LaTeX", en: "Math formulas — no LaTeX needed" },
     steps: [
       {
-        th: "แผง “สูตร” → “เพิ่มบล็อกสูตร” · กดปุ่มสัญลักษณ์ประกอบเอง หรือให้ AI ช่วยก็ได้",
-        en: "The Formula panel → “Add Formula Block” · build it from symbol buttons, or let AI help.",
+        th: "แผง “สูตร” ที่แถบซ้าย (หมวดที่ 4) → “เพิ่มบล็อกสูตร” · กดปุ่มสัญลักษณ์ประกอบเอง หรือให้ AI ช่วยก็ได้",
+        en: "The Formula panel on the left rail (4th category) → “Add Formula Block” · build it from symbol buttons, or let AI help.",
       },
       {
         th: "กด “ให้ AI เขียนสูตร (ไม่ต้องรู้ LaTeX)” แล้วพิมพ์แบบคน เช่น s = ut + 1/2at^2 + บอกว่าคือสูตรอะไร",
@@ -152,6 +155,10 @@ export const CREATING_SCENES: GuideScene[] = [
       {
         th: "ได้สูตรสวยๆ ทันที และแก้ LaTeX ต่อเองได้เสมอถ้าอยากปรับ",
         en: "You get a clean rendered formula instantly — and can still hand-edit the LaTeX any time.",
+      },
+      {
+        th: "ทุกบล็อกสูตรมีปุ่มจัดการอยู่ที่มุมขวาบนของบล็อก — ลูกศรขึ้น/ลง = เลื่อนบล็อกขึ้น-ลง · รูปตา = ดูตัวอย่างแบบนักเรียน · ถังขยะ = ลบบล็อก",
+        en: "Every formula block has controls in its top-right corner — up/down arrows move the block, the eye previews it as a student, the trash deletes it.",
       },
     ],
     images: [
@@ -167,16 +174,20 @@ export const CREATING_SCENES: GuideScene[] = [
     title: { th: "สร้างคำถามชวนคิด (หัวใจของเว็บนี้)", en: "Create think-questions (the heart of this site)" },
     steps: [
       {
-        th: "แผง “คำถาม”: 5 แบบ — เลือกตอบ · เขียนตอบ · เติมคำ(ลาก) · เติมคำ(พิมพ์) · กล่องถาม AI",
-        en: "The Question panel: 5 types — choice · written · drag-blank · type-blank · Ask-AI block.",
+        th: "แผง “คำถาม” ที่แถบซ้าย (หมวดล่างสุด): 5 แบบ — เลือกตอบ · เขียนตอบ · เติมคำ(ลาก) · เติมคำ(พิมพ์) · กล่องถาม AI",
+        en: "The Question panel on the left rail (bottom category): 5 types — choice · written · drag-blank · type-blank · Ask-AI block.",
       },
       {
         th: "“แนวเฉลย” สำคัญมาก — AI ติวเตอร์ใช้มันสอนนักเรียน (ให้ AI ร่างแนวเฉลยให้ได้ · ตัวลวงก็ให้ AI เสนอได้)",
         en: "The guide answer matters — the tutor teaches from it (AI can draft it · AI can suggest distractors).",
       },
       {
-        th: "โหมดคำแนะนำ: “เข้าใจแบบย่อ” ⇄ “สะท้อนความคิดแบบละเอียด” · ปุ่มรูปตา = ดูตัวอย่างแบบนักเรียน",
-        en: "Feedback mode: “quick understanding” ⇄ “deep reflection” · the eye icon = preview as a student.",
+        th: "โหมดคำแนะนำเลือกได้ในบล็อกคำถามแต่ละอัน: “เข้าใจแบบย่อ” ⇄ “สะท้อนความคิดแบบละเอียด”",
+        en: "Set the feedback depth on each question block: “quick understanding” ⇄ “deep reflection”.",
+      },
+      {
+        th: "ทุกบล็อกคำถามมีปุ่มจัดการอยู่ที่มุมขวาบนของบล็อก — ลูกศรขึ้น/ลง = เลื่อนบล็อกขึ้น-ลง (จัดลำดับคำถาม) · รูปตา = ดูตัวอย่างแบบนักเรียน · ถังขยะ = ลบบล็อก",
+        en: "Every question block has controls in its top-right corner — up/down arrows reorder it, the eye previews it as a student, the trash deletes it.",
       },
     ],
     images: [
@@ -196,8 +207,8 @@ export const CREATING_SCENES: GuideScene[] = [
     title: { th: "ให้ AI ช่วยทั้งเส้นทาง", en: "Let AI help the whole way" },
     steps: [
       {
-        th: "หมวด AI (ไอคอน ✨ บนสุด) เรียงตามขั้นตอน: 1 เริ่ม → 2 เขียนและเกลา → 3 คำถาม → 4 ก่อนเผยแพร่",
-        en: "The AI category (✨ at the top) runs by step: 1 start → 2 write & polish → 3 questions → 4 before publish.",
+        th: "หมวด AI (ไอคอน ✨ บนสุดของแถบซ้าย) เรียงตามขั้นตอน: 1 เริ่ม → 2 เขียนและเกลา → 3 คำถาม → 4 ก่อนเผยแพร่",
+        en: "The AI category (✨ at the top of the left rail) runs by step: 1 start → 2 write & polish → 3 questions → 4 before publish.",
       },
       {
         th: "“วางเนื้อหาเดิม” คือทางลัด — วางชีทเก่า ไฟล์ Word หรือแชต GPT แล้ว AI จัดให้เป็นบทเรียนพร้อมคำถาม",
@@ -225,12 +236,12 @@ export const CREATING_SCENES: GuideScene[] = [
     title: { th: "ตรวจ แล้วเผยแพร่", en: "Review, then publish" },
     steps: [
       {
-        th: "“ตรวจบทเรียน” = AI อ่านทั้งบทแล้วบอกจุดที่ปรับได้ (แค่คำแนะนำ ไม่บังคับ ไม่บล็อกการเผยแพร่)",
-        en: "“Review the lesson” = AI reads it all and flags what to improve (advice only — never blocks publishing).",
+        th: "“ตรวจบทเรียน” (ปุ่มที่แถบบนสุด ใกล้ปุ่มเผยแพร่) = AI อ่านทั้งบทแล้วบอกจุดที่ปรับได้ (แค่คำแนะนำ ไม่บังคับ ไม่บล็อกการเผยแพร่)",
+        en: "“Review the lesson” (a button in the top bar, next to Publish) = AI reads it all and flags what to improve (advice only — never blocks publishing).",
       },
       {
-        th: "กด “เผยแพร่” → ตั้งชื่อ + รูปปก + หัวข้อ + คำอธิบาย (มีปุ่ม “ให้ AI ช่วยกรอก”)",
-        en: "Hit “Publish” → set title + cover + topics + description (an “AI autofill” button is there).",
+        th: "กดปุ่ม “เผยแพร่” (มุมขวาบนสุดของจอ) → ตั้งชื่อ + รูปปก + หัวข้อ + คำอธิบาย (มีปุ่ม “ให้ AI ช่วยกรอก”)",
+        en: "Hit “Publish” (top-right corner of the screen) → set title + cover + topics + description (an “AI autofill” button is there).",
       },
       {
         th: "การมองเห็น 3 แบบ: สาธารณะ (ขึ้นหน้าสำรวจ) · เฉพาะลิงก์ (เห็นเฉพาะคนมีลิงก์) · ส่วนตัว · ตั้งนิสัย AI ติวเตอร์ประจำบทเรียนได้ด้วย",
@@ -254,16 +265,16 @@ export const CREATING_SCENES: GuideScene[] = [
     title: { th: "แชร์ให้นักเรียน แล้วดูผ่านตาเขา", en: "Share it, then see it as a student" },
     steps: [
       {
-        th: "ในส่วน “การแชร์”: ให้ QR code นักเรียนสแกน (แตะเพื่อขยายเต็มจอ ฉายขึ้นโปรเจกเตอร์ได้) หรือคัดลอกลิงก์ไปวางใน LINE/Facebook",
-        en: "Under “Sharing”: a QR code for students to scan (tap to enlarge for a projector) or copy the link into LINE/Facebook.",
+        th: "ในส่วน “การแชร์” (ในหน้าต่างเผยแพร่): ให้ QR code นักเรียนสแกน (แตะเพื่อขยายเต็มจอ ฉายขึ้นโปรเจกเตอร์ได้) หรือคัดลอกลิงก์ไปวางใน LINE/Facebook",
+        en: "Under “Sharing” (inside the publish modal): a QR code for students to scan (tap to enlarge for a projector) or copy the link into LINE/Facebook.",
       },
       {
         th: "นักเรียนเปิดได้เลย “ไม่ต้องมีบัญชี” · กด “เผยแพร่ตอนนี้” ระบบพาไปหน้าที่นักเรียนเห็นจริง",
         en: "Students open it with no account needed · “Publish now” takes you to exactly what students see.",
       },
       {
-        th: "เจอจุดต้องแก้? กดปุ่มดินสอ (มุมขวาล่าง) กลับมาแก้ได้ · ลบบทเรียนได้จากปุ่มลบในหน้าต่างเผยแพร่",
-        en: "Spot a fix? Tap the pencil (bottom-right) to edit again · delete a lesson from the Delete button in the publish modal.",
+        th: "เจอจุดต้องแก้? กดปุ่มดินสอ (มุมขวาล่างของจอ) กลับมาแก้ได้ · ลบบทเรียนได้จากปุ่มลบในหน้าต่างเผยแพร่",
+        en: "Spot a fix? Tap the pencil (bottom-right of the screen) to edit again · delete a lesson from the Delete button in the publish modal.",
       },
     ],
     tip: {

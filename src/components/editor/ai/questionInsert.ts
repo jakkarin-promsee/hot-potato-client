@@ -74,12 +74,13 @@ export function resolveInsertPos(editor: Editor): number {
 export function insertGeneratedQuestions(
   editor: Editor,
   questions: GeneratedQuestion[],
+  insertPos?: number,
 ): void {
   if (!questions.length) return;
   const content = questions.flatMap((q) => [
     generatedQuestionToNode(q),
     { type: "paragraph" },
   ]);
-  const pos = resolveInsertPos(editor);
+  const pos = insertPos ?? resolveInsertPos(editor);
   editor.chain().focus().insertContentAt(pos, content).run();
 }
