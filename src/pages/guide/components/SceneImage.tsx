@@ -1,0 +1,21 @@
+import { useAppI18n } from "@/lib/i18n";
+import { GUIDE_IMAGES } from "../guideImages";
+import type { SceneImageRef } from "../scenes";
+
+// Guide screenshots are static assets in client/public/guide/ (never imported —
+// keeps them out of every JS chunk; see ROADMAP-guide.md §11 bundle budget).
+export function SceneImage({ image }: { image: SceneImageRef }) {
+  const { t } = useAppI18n();
+  const dims = GUIDE_IMAGES[image.file];
+
+  return (
+    <img
+      src={`/guide/${image.file}`}
+      alt={t(image.alt.en, image.alt.th)}
+      loading="lazy"
+      width={dims?.width}
+      height={dims?.height}
+      className="w-full max-w-sm rounded-xl border border-border bg-card shadow-sm"
+    />
+  );
+}

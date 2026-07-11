@@ -22,6 +22,8 @@ const Explore = lazy(() => import("./pages/Explore"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Settings = lazy(() => import("./pages/Setting"));
 const Guide = lazy(() => import("./pages/Guide"));
+const LearningShowcase = lazy(() => import("./pages/guide/LearningShowcase"));
+const CreatingShowcase = lazy(() => import("./pages/guide/CreatingShowcase"));
 const History = lazy(() => import("./pages/History"));
 const Create = lazy(() => import("./pages/Create"));
 const ChangePassword = lazy(() => import("./pages/ChangePassword"));
@@ -91,6 +93,8 @@ const App = () => {
               />
               <Route path="/explore" element={<Explore />} />
               <Route path="/guide" element={<Guide />} />
+              <Route path="/guide/learning" element={<LearningShowcase />} />
+              <Route path="/guide/creating" element={<CreatingShowcase />} />
               <Route
                 path="/history"
                 element={

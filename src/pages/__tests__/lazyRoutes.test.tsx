@@ -56,7 +56,16 @@ describe("lazy routes", () => {
     window.history.pushState({}, "", "/guide");
     const el = renderApp();
     await vi.waitFor(() => {
-      expect(el.textContent).toContain("Ready to start?");
+      expect(el.textContent).toContain("คู่มือการใช้งาน");
     });
+  });
+
+  it("guide showcase pages are lazy routes (bundle budget guard)", () => {
+    const appSrc = readFileSync(
+      path.resolve(process.cwd(), "src/App.tsx"),
+      "utf8",
+    );
+    expect(appSrc).toContain('import("./pages/guide/LearningShowcase")');
+    expect(appSrc).toContain('import("./pages/guide/CreatingShowcase")');
   });
 });

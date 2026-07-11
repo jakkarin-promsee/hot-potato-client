@@ -1,151 +1,127 @@
-import {
-  BookOpen,
-  PenSquare,
-  Eye,
-  Share2,
-  Sparkles,
-  Brain,
-  Bot,
-  BarChart3,
-} from "lucide-react";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import {
+  ArrowRight,
+  Compass,
+  GraduationCap,
+  HeartPulse,
+  MessageCircle,
+  PenSquare,
+} from "lucide-react";
+import { useAppI18n } from "@/lib/i18n";
+import { OWNER_FACEBOOK_URL } from "@/lib/contact";
+import { BRAND_NAME } from "@/lib/brand";
 
-interface Feature {
+// /guide — the guide hub (ROADMAP-guide.md Tier G2). Routes readers to the two
+// showcase walkthroughs by role, plus a straight-to-Explore shortcut.
+
+interface RoleCard {
+  to: string;
   icon: React.ElementType;
-  title: string;
-  description: string;
-  detail: string;
+  title: { en: string; th: string };
+  description: { en: string; th: string };
+  badge?: { en: string; th: string };
 }
 
-const features: Feature[] = [
+const ROLE_CARDS: RoleCard[] = [
   {
+    to: "/guide/learning",
+    icon: GraduationCap,
+    title: { th: "ฉันเป็นนักเรียน", en: "I'm a student" },
+    description: {
+      th: "เรียนยังไง: หาบทเรียน ตอบคำถามชวนคิด คุยกับ AI ติวเตอร์ — ไม่ต้องสมัครก็ใช้ได้ครบ",
+      en: "How to learn: find lessons, answer think-questions, chat with the AI tutor — no account needed.",
+    },
+    badge: { th: "9 ขั้นตอน", en: "9 steps" },
+  },
+  {
+    to: "/guide/creating",
     icon: PenSquare,
-    title: "Visual Lesson Editor",
-    description:
-      "Create long-form, manga-style lessons with a rich block editor.",
-    detail:
-      "Drag, drop, and arrange content freely to build intuitive visual narratives. Add images, diagrams, annotations, and flow layouts — all in a single, scrollable canvas designed for storytelling.",
+    title: { th: "ฉันเป็นครู", en: "I'm a teacher" },
+    description: {
+      th: "สร้างบทเรียนยังไง: เขียนเนื้อหา แทรกคำถาม ให้ AI ช่วย แล้วเผยแพร่และแชร์ให้นักเรียน",
+      en: "How to create: write content, embed questions, lean on the AI copilot, then publish and share.",
+    },
+    badge: { th: "กำลังจัดทำ", en: "in progress" },
   },
   {
-    icon: Eye,
-    title: "Immersive Viewer",
-    description: "A distraction-free, full-screen reader for deep focus.",
-    detail:
-      "Students scroll through lessons in a cinema-like experience. The viewer hides all chrome so the content is the only thing that matters. Designed for mobile-first consumption.",
-  },
-  {
-    icon: Brain,
-    title: "Critical-Thinking Questions",
-    description:
-      "Choice, fill-in-the-blank, and open-ended writing blocks with warm AI coaching.",
-    detail:
-      "Teachers embed questions anywhere in a lesson. Students get coaching on every answer — never a red ✗. The AI admires your thinking first and helps you go deeper.",
-  },
-  {
-    icon: Bot,
-    title: "AI Tutor — น้องมันฝรั่ง",
-    description:
-      "Ask anything about the lesson, anytime, in Thai — no account needed.",
-    detail:
-      "Suggestion chips guide you when you don't know what to ask. Chat freely about the lesson content. Works fully without logging in; sign in only if you want the tutor to remember you across visits.",
-  },
-  {
-    icon: BookOpen,
-    title: "Explore & Discover",
-    description: "Browse public lessons from all creators.",
-    detail:
-      "Bookmark lessons on this device, search by topic, and find inspiration from the community. Bookmarks stay on your phone or browser — no account required.",
-  },
-  {
-    icon: BarChart3,
-    title: "Learning History",
-    description: "Track every lesson you've viewed, sorted by time.",
-    detail:
-      "Your personal workspace to revisit and continue where you left off. History is grouped by day so you can see your learning patterns at a glance.",
-  },
-  {
-    icon: Share2,
-    title: "Share & Collaborate",
-    description: "Publish publicly or keep lessons private.",
-    detail:
-      "Generate shareable links and invite collaborators. Control visibility per-lesson with simple privacy settings from the publish menu.",
-  },
-  {
-    icon: Sparkles,
-    title: "Your AI remembers you",
-    description:
-      "Logged-in students get continuity across lessons.",
-    detail:
-      "The tutor remembers your interests and growth areas so coaching feels personal over time. Anonymous users still get the full tutor — just without cross-lesson memory.",
+    to: "/explore",
+    icon: Compass,
+    title: { th: "ไม่อ่านคู่มือละ ขอลองเลย", en: "Skip the manual — let me try" },
+    description: {
+      th: "เข้าหน้าสำรวจ เปิดบทเรียนไหนก็ได้ แล้วลองกดปุ่ม Ask AI ดู",
+      en: "Jump into Explore, open any lesson, and try the Ask AI button.",
+    },
   },
 ];
 
 export default function Guide() {
+  const { t } = useAppI18n();
+
   return (
     <div className="pb-24 md:pb-12">
       <div className="container px-4 pt-12 text-center">
         <h1 className="font-serif text-3xl font-bold sm:text-4xl">
-          What Intuita can do
+          {t("How to use " + BRAND_NAME, "คู่มือการใช้งาน")}
         </h1>
         <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-          Everything you need to create, share, and learn through visual
-          intuition — with an AI tutor in your pocket.
+          {t(
+            "Pick your path — we'll walk you through step by step, with pictures.",
+            "เลือกเส้นทางของคุณ แล้วเราจะพาไปทีละขั้น พร้อมรูปประกอบทุกจุด",
+          )}
         </p>
       </div>
 
-      <div className="mt-16 space-y-0">
-        {features.map((f, i) => {
-          const isEven = i % 2 === 0;
-          return (
-            <section
-              key={f.title}
-              className={`border-t border-border ${isEven ? "bg-card/50" : "bg-background"}`}
+      <div className="container mt-10 px-4">
+        <div className="mx-auto grid max-w-3xl gap-4 sm:grid-cols-2">
+          {ROLE_CARDS.map((card, i) => (
+            <Link
+              key={card.to}
+              to={card.to}
+              className={`group rounded-2xl border border-border bg-card/50 p-6 transition-colors hover:border-primary/50 hover:bg-card ${
+                i === 2 ? "sm:col-span-2" : ""
+              }`}
             >
-              <div className="container px-4 py-16 md:py-24">
-                <div
-                  className={`mx-auto flex max-w-3xl flex-col items-center gap-8 md:flex-row ${!isEven ? "md:flex-row-reverse" : ""}`}
-                >
-                  <div className="flex w-full shrink-0 items-center justify-center md:w-1/2">
-                    <div className="flex h-48 w-full max-w-xs items-center justify-center rounded-2xl border border-border text-muted-foreground from-primary/10 via-accent to-card sm:h-56">
-                      <f.icon className="h-16 w-16 text-primary/60" />
-                    </div>
-                  </div>
-
-                  <div className="w-full text-center md:w-1/2 md:text-left">
-                    <span className="mb-2 inline-block rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <h2 className="mt-1 font-serif text-xl font-bold sm:text-2xl">
-                      {f.title}
-                    </h2>
-                    <p className="mt-2 text-sm font-medium text-foreground/80">
-                      {f.description}
-                    </p>
-                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                      {f.detail}
-                    </p>
-                  </div>
+              <div className="flex items-start justify-between">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10">
+                  <card.icon className="h-5 w-5 text-primary" />
                 </div>
+                {card.badge && (
+                  <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                    {t(card.badge.en, card.badge.th)}
+                  </span>
+                )}
               </div>
-            </section>
-          );
-        })}
+              <h2 className="mt-4 font-serif text-lg font-bold">
+                {t(card.title.en, card.title.th)}
+              </h2>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                {t(card.description.en, card.description.th)}
+              </p>
+              <span className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary">
+                {t("Open the guide", "เปิดคู่มือ")}
+                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+              </span>
+            </Link>
+          ))}
+        </div>
       </div>
 
-      <div className="container px-4 py-16 text-center">
-        <p className="font-serif text-lg font-semibold">Ready to start?</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Jump into Explore or create your first lesson.
+      <div className="container mt-12 px-4 text-center text-sm text-muted-foreground">
+        <p>
+          {t("Something broken or confusing?", "เจออะไรพังหรืองงตรงไหน?")}{" "}
+          <a
+            href={OWNER_FACEBOOK_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-primary hover:underline"
+          >
+            {t("Message the maker", "ทักหาคนทำเว็บ")}
+          </a>
+          {" · "}
+          <Link to="/status" className="font-medium text-primary hover:underline">
+            {t("Check system status", "เช็กสถานะระบบ")}
+          </Link>
         </p>
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-          <Button asChild>
-            <Link to="/explore">Explore lessons</Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link to="/create">I&apos;m a teacher</Link>
-          </Button>
-        </div>
       </div>
     </div>
   );
