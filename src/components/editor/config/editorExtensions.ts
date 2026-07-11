@@ -16,6 +16,7 @@ import { Markdown } from "tiptap-markdown";
 import Link from "@tiptap/extension-link";
 import { SearchHighlightExtension } from "../extensions/SearchHighlight";
 import { NumberedSectionHeadingsExtension } from "../extensions/numberedSectionHeadings";
+import { OutlineDraftParagraph } from "../extensions/outlineDraftParagraph";
 import { FabricCanvasNode } from "../extensions/FabricCanvasNode";
 import { QuestionChoiceNode } from "../extensions/QuestionChoiceNode";
 import { QuestionWriteNode } from "../extensions/QuestionWriteNode";
@@ -28,6 +29,7 @@ import { FormulaBlockNode } from "../FormulaBlock";
 export const createEditorExtensions = (editable = true) => [
   StarterKit.configure({
     codeBlock: false,
+    paragraph: false,
     heading: { levels: [1, 2, 3] },
     bulletList: {
       keepMarks: true,
@@ -71,6 +73,7 @@ export const createEditorExtensions = (editable = true) => [
   TaskList,
   TaskItem.configure({ nested: true }),
   SearchHighlightExtension,
+  OutlineDraftParagraph,
   NumberedSectionHeadingsExtension,
   FabricCanvasNode,
   FormulaBlockNode,

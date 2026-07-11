@@ -10,6 +10,7 @@ import {
   formatHeadingOptionLabel,
   formatLessonMarkdownPreview,
   insertMarkdownAt,
+  insertOutlineMarkdownAt,
   isDocEffectivelyEmpty,
   listHeadings,
   outlineSnapshot,
@@ -18,9 +19,13 @@ import {
   selectedSectionsMarkdown,
   stripLeadingSectionHeading,
 } from "../draftHelpers";
+import { OutlineDraftParagraph } from "../../extensions/outlineDraftParagraph";
 
 function makeEditor(content: string): Editor {
-  return new Editor({ extensions: [StarterKit, Markdown], content });
+  return new Editor({
+    extensions: [StarterKit.configure({ paragraph: false }), OutlineDraftParagraph, Markdown],
+    content,
+  });
 }
 
 const asReact = (e: Editor) => e as unknown as ReactEditor;
@@ -195,6 +200,23 @@ describe("insertMarkdownAt", () => {
     expect(headings.map((h) => h.text)).toEqual(["หัวข้อหนึ่ง", "หัวข้อสอง"]);
     // Original content survives at the end
     expect(editor.state.doc.textContent).toContain("ของเดิม");
+    editor.destroy();
+  });
+
+  it("insertOutlineMarkdownAt tags description paragraphs as outline draft", () => {
+    const editor = makeEditor("<p>ของเดิม</p>");
+    insertOutlineMarkdownAt(
+      asReact(editor),
+      0,
+      "## หัวข้อหนึ่ง\n\nหัวข้อนี้จะสอนเรื่องพหุนาม\n\n## หัวข้อสอง\n\n*สรุปสั้น*",
+    );
+    const json = editor.getJSON();
+    const paragraphs = (json.content ?? []).filter((n) => n.type === "paragraph");
+    const draftParagraphs = paragraphs.filter((p) => p.attrs?.outlineDraft === true);
+    expect(draftParagraphs).toHaveLength(2);
+    expect(paragraphs.find((p) => p.content?.[0]?.text === "ของเดิม")?.attrs?.outlineDraft).toBeFalsy();
+    const headings = (json.content ?? []).filter((n) => n.type === "heading");
+    expect(headings.every((h) => !h.attrs?.outlineDraft)).toBe(true);
     editor.destroy();
   });
 

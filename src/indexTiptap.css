@@ -530,6 +530,15 @@ button.bg-editor-highlight {
   margin-top: 0.95em;
 }
 
+/* AI outline scaffold — editor only; students never see this in the viewer. */
+.tiptap-editor--editor .ProseMirror p[data-outline-draft] {
+  color: hsl(0 52% 58%);
+}
+
+.tiptap-editor--editor .ProseMirror p[data-outline-draft] em {
+  color: inherit;
+}
+
 .tiptap-editor .ProseMirror strong {
   font-weight: 650;
 }

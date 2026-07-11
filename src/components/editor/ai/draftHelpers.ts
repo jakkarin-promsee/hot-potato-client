@@ -168,6 +168,59 @@ export function insertMarkdownAt(
   editor.chain().focus().insertContentAt(pos, markdown).run();
 }
 
+function insertedRange(
+  editor: Editor,
+  pos: InsertPoint,
+  sizeBefore: number,
+): { from: number; to: number } {
+  const sizeAfter = editor.state.doc.content.size;
+  if (typeof pos === "number") {
+    return { from: pos, to: pos + (sizeAfter - sizeBefore) };
+  }
+  const replaced = pos.to - pos.from;
+  const insertedLength = sizeAfter - sizeBefore + replaced;
+  return { from: pos.from, to: pos.from + insertedLength };
+}
+
+/** Tag non-heading blocks in a range as outline-draft scaffold paragraphs. */
+function tagOutlineDraftBlocks(
+  editor: Editor,
+  from: number,
+  to: number,
+): void {
+  const { doc } = editor.state;
+  const tr = editor.state.tr;
+  let changed = false;
+
+  doc.nodesBetween(from, Math.min(to, doc.content.size), (node, nodePos) => {
+    if (node.type.name === "heading") return true;
+    if (node.type.name !== "paragraph" || node.attrs.outlineDraft) return true;
+    tr.setNodeMarkup(nodePos, undefined, {
+      ...node.attrs,
+      outlineDraft: true,
+    });
+    changed = true;
+    return false;
+  });
+
+  if (changed) editor.view.dispatch(tr);
+}
+
+/**
+ * Insert an AI lesson outline and mark its description paragraphs so teachers
+ * can spot scaffold text they still need to replace or delete.
+ */
+export function insertOutlineMarkdownAt(
+  editor: Editor,
+  pos: InsertPoint,
+  markdown: string,
+): void {
+  const sizeBefore = editor.state.doc.content.size;
+  insertMarkdownAt(editor, pos, markdown);
+  const { from, to } = insertedRange(editor, pos, sizeBefore);
+  tagOutlineDraftBlocks(editor, from, to);
+}
+
 export function docEndPos(editor: Editor): number {
   return editor.state.doc.content.size;
 }

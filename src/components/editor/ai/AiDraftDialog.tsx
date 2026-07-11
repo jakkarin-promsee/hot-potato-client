@@ -23,6 +23,7 @@ import {
   formatHeadingBelowOptionLabel,
   formatLessonMarkdownPreview,
   insertMarkdownAt,
+  insertOutlineMarkdownAt,
   listHeadings,
   outlineSnapshot,
   sectionEndInsertPos,
@@ -387,7 +388,7 @@ export default function AiDraftDialog({
                   <button
                     type="button"
                     onClick={() => {
-                      insertMarkdownAt(editor, caretInsertPoint(editor), outlineResult);
+                      insertOutlineMarkdownAt(editor, caretInsertPoint(editor), outlineResult);
                       setOutlineInserted(true);
                     }}
                     className="flex-1 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
