@@ -78,7 +78,9 @@ Defined in `App.tsx` with three guard components. `BrowserRouter` + `QueryClient
 | `/` | `Landing` | — | Marketing/landing |
 | `/login` | `Login` | `PublicRoute` | Redirects away if already logged in |
 | `/explore` | `Explore` | — | Browse public lessons |
-| `/guide` | `Guide` | — | How-to / help |
+| `/guide` | `Guide` | — | Guide **hub** (Tier G2): role cards → the two showcases below + Explore shortcut |
+| `/guide/learning` | `guide/LearningShowcase` | — | Student walkthrough — 9 screenshot scenes (Tier G3) |
+| `/guide/creating` | `guide/CreatingShowcase` | — | Teacher walkthrough — placeholder until guide-roadmap Tier G4 |
 | `/dashboard` | `Dashboard` | `ProtectedRoute` | Creator's lessons |
 | `/create` | `Create` | `ProtectedRoute` | Start a new lesson |
 | `/canvas/:id` | `TipTapCanvas` | `ProtectedRoute` | **The lesson editor** |
@@ -220,6 +222,13 @@ In production these are set in the Vercel dashboard, with `VITE_API_URL` pointin
 - **Known limitation (deliberate):** this is a client-rendered SPA and social crawlers don't run JS, so **every `/view/:id` lesson link shares the same generic site card**. Real per-lesson OG tags need SSR/prerendering/edge functions — parked as ROADMAP Tier 6.D. Don't try to "fix" it inside `index.html`.
 - `og:image`/`twitter:image` are **root-relative until launch**. Tier 5 launch step: switch them to the absolute production URL and validate with the Facebook Sharing Debugger / LINE / Discord paste. `og:url` + canonical are also deferred to Tier 5 for the same reason.
 - The static `lang="th"` is the crawler-facing default; `language.store.ts` overwrites `document.documentElement.lang` at runtime when the user toggles language — both are correct, don't unify them.
+
+## Guide pages (2026-07-11, ROADMAP-guide.md at workspace root)
+
+- Scene copy lives as **data** in `src/pages/guide/*Scenes.ts` (`{en, th}` pairs); layout in `src/pages/guide/components/` (`ShowcaseShell` is shared by both showcases). Scene counts are pinned by tests.
+- **Screenshots are generated, never hand-captured:** `node scripts/seed-guide-demo.mjs` (demo accounts + link-only demo lesson with every question type) then `node scripts/capture-guide.mjs` (Playwright → WebP into `public/guide/` + regenerates `src/pages/guide/guideImages.ts`). Rerun after UI changes; `--scene <id>` recaptures one. AI-marked scenes cost real Gemini tokens.
+- **Bundle rule:** guide images are static files under `public/guide/` referenced by URL — never `import` them; both showcase pages stay lazy routes (guarded by tests in `pages/__tests__/`).
+- `lib/brand.ts` `BRAND_NAME` is the working product name (owner hasn't picked a final brand) — new user-facing copy should use it instead of hardcoding a name.
 
 ## Gotchas
 
