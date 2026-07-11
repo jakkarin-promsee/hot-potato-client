@@ -11,14 +11,12 @@ interface ThemeState {
 const THEME_STORAGE_KEY = "theme";
 
 const detectInitialTheme = (): ThemeMode => {
-  if (typeof window === "undefined") return "dark";
+  if (typeof window === "undefined") return "light";
 
   const saved = window.localStorage.getItem(THEME_STORAGE_KEY);
   if (saved === "light" || saved === "dark") return saved;
 
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+  return "light";
 };
 
 const applyTheme = (theme: ThemeMode) => {
