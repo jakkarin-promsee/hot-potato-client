@@ -76,7 +76,7 @@ Defined in `App.tsx` with three guard components. `BrowserRouter` + `QueryClient
 | Path | Page | Guard | Notes |
 | --- | --- | --- | --- |
 | `/` | `Landing` | — | **Home = landing + guide hub merged (2026-07-11):** hero pitch (bilingual, `BRAND_NAME`) + role cards → the two showcases + contact footer. Eager import; inside `AppLayout` |
-| `/login` | `Login` | `PublicRoute` | Redirects away if already logged in |
+| `/login` | `Login` | `PublicRoute` | Redirects away if already logged in. Also hosts **Google sign-in** (2026-07-11): `@react-oauth/google` button (bilingual, mode-aware) → `auth.store.loginWithGoogle` → `POST /auth/google`; hidden when `VITE_GOOGLE_CLIENT_ID` is unset |
 | `/explore` | `Explore` | — | Browse public lessons |
 | `/guide` | — | — | Redirect → `/` (`Navigate replace`; the Tier G2 hub was merged into Landing 2026-07-11) |
 | `/guide/learning` | `guide/LearningShowcase` | — | Student walkthrough — 9 screenshot scenes (Tier G3) |
@@ -105,7 +105,7 @@ Global stores in `src/stores/`. Each is a `create()` store; some use the `persis
 
 | Store | Responsibility |
 | --- | --- |
-| `auth.store` | `user` + `token` (**persisted** as `auth-storage`), `login` / `register` / `recheckToken` / `logout` |
+| `auth.store` | `user` + `token` (**persisted** as `auth-storage`), `login` / `loginWithGoogle` / `register` / `recheckToken` / `logout` |
 | `profile.store` | Account profile (`GET/PUT /users/me/profile`); syncs `auth.store` on name change |
 | `bookmark.store` | Device-local lesson bookmarks (**persisted** as `bookmark-storage`) |
 | `content.store` | The current lesson document (load / create / update / delete via API) |
@@ -213,6 +213,7 @@ Create `client/.env` (git-ignored). Only `VITE_`-prefixed vars are exposed to th
 | `VITE_API_URL` | Base URL of the server API (e.g. `http://localhost:5000`) |
 | `VITE_CLOUDINARY_CLOUD_NAME` | Cloudinary account name |
 | `VITE_CLOUDINARY_UPLOAD_PRESET` | Cloudinary unsigned upload preset |
+| `VITE_GOOGLE_CLIENT_ID` | Google OAuth Web client id for the Login page's "Sign in with Google" button (Google sign-in, 2026-07-11). Unset → the button section simply doesn't render. Origin must be registered in Google Cloud Console (`http://localhost:5173` now; prod URL at Tier 5). |
 
 In production these are set in the Vercel dashboard, with `VITE_API_URL` pointing at the Render server.
 

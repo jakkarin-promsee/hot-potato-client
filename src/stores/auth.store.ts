@@ -15,6 +15,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (credential: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   recheckToken: () => Promise<void>;
   logout: () => void;
@@ -36,6 +37,19 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const res = await api.post("/auth/login", { email, password });
+          set({ user: res.data.user, token: res.data.token, isLoading: false });
+        } catch (err) {
+          set({ isLoading: false });
+          throw err;
+        }
+      },
+
+      // credential = the Google-signed JWT from the GIS button; the server
+      // verifies it and returns the same { user, token } shape as /login.
+      loginWithGoogle: async (credential) => {
+        set({ isLoading: true, error: null });
+        try {
+          const res = await api.post("/auth/google", { credential });
           set({ user: res.data.user, token: res.data.token, isLoading: false });
         } catch (err) {
           set({ isLoading: false });

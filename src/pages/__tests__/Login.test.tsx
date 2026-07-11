@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Login from "../Login";
 
 const mockLogin = vi.fn();
+const mockLoginWithGoogle = vi.fn();
 const mockRegister = vi.fn();
 const mockNavigate = vi.fn();
 let language: "en" | "th" = "en";
@@ -18,10 +19,31 @@ vi.mock("@/stores/language.store", () => ({
 vi.mock("@/stores/auth.store", () => ({
   useAuthStore: () => ({
     login: mockLogin,
+    loginWithGoogle: mockLoginWithGoogle,
     register: mockRegister,
     isLoading: false,
     error: null,
   }),
+}));
+
+// The real GoogleLogin renders inside a Google-hosted iframe — swap it for a
+// plain button that hands back a fake credential.
+vi.mock("@react-oauth/google", () => ({
+  GoogleOAuthProvider: ({ children }: { children?: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  GoogleLogin: ({
+    onSuccess,
+  }: {
+    onSuccess: (r: { credential?: string }) => void;
+  }) => (
+    <button
+      type="button"
+      onClick={() => onSuccess({ credential: "fake-google-credential" })}
+    >
+      Mock Google
+    </button>
+  ),
 }));
 
 vi.mock("react-router-dom", async () => {
@@ -64,15 +86,20 @@ afterEach(() => {
   container?.remove();
   container = null;
   root = null;
+  vi.unstubAllEnvs();
 });
 
 beforeEach(() => {
   language = "en";
   mockLogin.mockReset();
+  mockLoginWithGoogle.mockReset();
   mockRegister.mockReset();
   mockNavigate.mockReset();
   mockLogin.mockResolvedValue(undefined);
+  mockLoginWithGoogle.mockResolvedValue(undefined);
   mockRegister.mockResolvedValue(undefined);
+  // Deterministic regardless of the machine's client/.env
+  vi.stubEnv("VITE_GOOGLE_CLIENT_ID", "test-google-client-id");
 });
 
 describe("Login page", () => {
@@ -188,6 +215,48 @@ describe("Login page", () => {
     });
 
     expect(mockNavigate).toHaveBeenCalledWith("/explore", { replace: true });
+  });
+
+  it("signs in with Google and redirects", async () => {
+    const el = renderLogin();
+    const googleBtn = Array.from(el.querySelectorAll("button")).find((b) =>
+      b.textContent?.includes("Mock Google"),
+    );
+    expect(googleBtn).toBeTruthy();
+
+    await act(async () => {
+      googleBtn?.click();
+    });
+
+    expect(mockLoginWithGoogle).toHaveBeenCalledWith("fake-google-credential");
+    expect(mockNavigate).toHaveBeenCalledWith("/explore", { replace: true });
+  });
+
+  it("shows the server message when Google sign-in fails", async () => {
+    mockLoginWithGoogle.mockRejectedValueOnce({
+      response: {
+        data: { message: "Your account has been suspended or blocked" },
+      },
+    });
+    const el = renderLogin();
+    const googleBtn = Array.from(el.querySelectorAll("button")).find((b) =>
+      b.textContent?.includes("Mock Google"),
+    );
+
+    await act(async () => {
+      googleBtn?.click();
+    });
+
+    expect(el.textContent).toContain(
+      "Your account has been suspended or blocked",
+    );
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("hides the Google button when the client id is not configured", () => {
+    vi.stubEnv("VITE_GOOGLE_CLIENT_ID", "");
+    const el = renderLogin();
+    expect(el.textContent).not.toContain("Mock Google");
   });
 
   it("renders Thai copy when language is Thai", () => {

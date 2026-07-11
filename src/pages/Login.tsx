@@ -1,6 +1,7 @@
 import { useAuthStore } from "@/stores/auth.store";
 import { isSafeRedirectTarget } from "@/lib/axios";
 import { useAppI18n } from "@/lib/i18n";
+import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 import { Info } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
@@ -49,11 +50,16 @@ const Login = () => {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState("");
 
-  const { login, register, isLoading } = useAuthStore();
+  const { login, loginWithGoogle, register, isLoading } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { t } = useAppI18n();
+  const { t, isThai } = useAppI18n();
+
+  // Read per render (not module scope) so tests can stub the env var.
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as
+    | string
+    | undefined;
 
   const reason = searchParams.get("reason");
   const code = searchParams.get("code");
@@ -103,6 +109,14 @@ const Login = () => {
     return Object.keys(errors).length === 0;
   };
 
+  const redirectAfterAuth = () => {
+    const target = resolveRedirectTarget(
+      (location.state as { from?: string } | null)?.from,
+      searchParams.get("redirect"),
+    );
+    navigate(target, { replace: true });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearErrors();
@@ -115,17 +129,33 @@ const Login = () => {
       } else {
         await login(email.trim(), password);
       }
-      const target = resolveRedirectTarget(
-        (location.state as { from?: string } | null)?.from,
-        searchParams.get("redirect"),
-      );
-      navigate(target, { replace: true });
+      redirectAfterAuth();
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data
           ?.message || t("Something went wrong", "เกิดข้อผิดพลาด");
       setServerError(message);
       useAuthStore.setState({ isLoading: false });
+    }
+  };
+
+  const handleGoogleSuccess = async (credential?: string) => {
+    clearErrors();
+    if (!credential) {
+      setServerError(
+        t("Google sign-in failed", "เข้าสู่ระบบด้วย Google ไม่สำเร็จ"),
+      );
+      return;
+    }
+    try {
+      await loginWithGoogle(credential);
+      redirectAfterAuth();
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ||
+        t("Google sign-in failed", "เข้าสู่ระบบด้วย Google ไม่สำเร็จ");
+      setServerError(message);
     }
   };
 
@@ -275,6 +305,36 @@ const Login = () => {
                   : t("Sign in", "เข้าสู่ระบบ")}
             </button>
           </form>
+
+          {googleClientId && (
+            <>
+              <div className="my-4 flex items-center gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs text-muted-foreground">
+                  {t("or", "หรือ")}
+                </span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+              <div className="flex justify-center">
+                <GoogleOAuthProvider clientId={googleClientId}>
+                  <GoogleLogin
+                    onSuccess={(res) => void handleGoogleSuccess(res.credential)}
+                    onError={() =>
+                      setServerError(
+                        t(
+                          "Google sign-in failed",
+                          "เข้าสู่ระบบด้วย Google ไม่สำเร็จ",
+                        ),
+                      )
+                    }
+                    locale={isThai ? "th" : "en"}
+                    text={isSignUp ? "signup_with" : "signin_with"}
+                    width={300}
+                  />
+                </GoogleOAuthProvider>
+              </div>
+            </>
+          )}
         </div>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
