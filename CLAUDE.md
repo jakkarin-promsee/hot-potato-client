@@ -159,6 +159,23 @@ Configured in `editor/config/editorExtensions.ts` (`createEditorExtensions(edita
 
 Each `*Node.ts` defines the TipTap node (schema/attrs); each `*View.tsx` is its React render. `SearchHighlight` adds in-document search highlighting.
 
+### The teacher AI copilot (Tier 3.5, editor-only)
+
+`src/lib/creatorApi.ts` is the **single creator bridge** — a typed `callCreator(contentId, action, payload)` over `POST /api/creator/assist` (plain axios, JSON-only, no SSE; throws `CreatorAiError` with a machine code). All copilot UI lives in `components/editor/ai/` and stays inside the lazy editor chunk:
+
+| Surface | Where | Action(s) |
+| --- | --- | --- |
+| `AiQuestionDialog` | Question panel in `EditorLeftSidebar` | `generate_questions` → preview cards → real question nodes (`questionInsert.ts` maps `guideAnswer`→`answer`, `answerType: "single"`, default feedbackMode, trailing paragraph) |
+| Guide-answer draft | `QuestionWriteView` creator mode (empty answer only) | `guide_answer` |
+| Distractor chips | `QuestionChoiceView` creator mode | `distractors` (appended as `correct: false`) |
+| `AiFormulaPanel` | `FormulaBlock/FormulaCanvas` edit mode | `formula_latex` → writes via the same `persistLatex` path as manual edits |
+| `AiWritingAssistant` | EditorHeader dropdown "ปรับข้อความ" (acts on selection) | `proofread` (6 presets incl. reading_level) |
+| `AiDraftLauncher` + `AiDraftDialog` | EditorHeader "ร่างบทเรียน" + empty-doc CTA | `outline` · `draft_section` · `import_structure` |
+| `AiCriticButton` | EditorHeader near Publish | `critic` (informational only — never gates publish) |
+| Publish autofill | `PublishSettingsModal` | `lesson_meta` · `agent_settings_suggest` |
+
+Rules that must not regress: **preview → accept** (AI output enters the doc only via a normal editor transaction after the teacher accepts; reject leaves the doc untouched); **AI prose is markdown** inserted through tiptap-markdown's `insertContentAt` override (string content parses as markdown — round-trip guarded by `ai/__tests__/writingAssist.test.ts`); question blocks arrive as typed JSON already validated server-side, never raw TipTap JSON. The writing assistant is a header dropdown, **not** a BubbleMenu — the editor card's CSS `zoom` makes floating-ui anchoring unreliable.
+
 ### How questions reach the AI
 
 `editor/extensions/tutorApi.ts` is the **single bridge** from every AI surface to the server's unified `POST /api/chat/tutor` (rewired in Tier 0 Phase 0.A, 2026-07-10 — the legacy `/chat/ask|feedback|write-evaluate` endpoints and `questionFeedbackApi.ts` are gone):
