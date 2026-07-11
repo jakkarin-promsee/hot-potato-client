@@ -16,12 +16,31 @@ export interface HeadingEntry {
   text: string;
   /** Position right after the heading node — where section content goes. */
   insertPos: number;
+  /** 1-based index for top-level H2 sections within the current H1 block. */
+  sectionNumber: number | null;
 }
 
 /** All ##/### (and #) headings in document order. */
 export function listHeadings(editor: Editor): HeadingEntry[] {
+  const doc = editor.state.doc;
+  const sectionNumberByPos = new Map<number, number>();
+  let topLevelH2Count = 0;
+
+  doc.forEach((node, offset) => {
+    if (node.type.name !== "heading") return;
+    const level = Number(node.attrs.level ?? 1);
+    if (level === 1) {
+      topLevelH2Count = 0;
+      return;
+    }
+    if (level === 2) {
+      topLevelH2Count += 1;
+      sectionNumberByPos.set(offset, topLevelH2Count);
+    }
+  });
+
   const headings: HeadingEntry[] = [];
-  editor.state.doc.descendants((node, pos) => {
+  doc.descendants((node, pos) => {
     if (node.type.name === "heading") {
       const text = node.textContent.trim();
       if (text) {
@@ -29,12 +48,22 @@ export function listHeadings(editor: Editor): HeadingEntry[] {
           level: Number(node.attrs.level ?? 1),
           text,
           insertPos: pos + node.nodeSize,
+          sectionNumber: sectionNumberByPos.get(pos) ?? null,
         });
       }
     }
     return true;
   });
   return headings;
+}
+
+/** Label for pickers — mirrors the auto `1. 2. 3.` shown on top-level H2 in the editor. */
+export function formatHeadingOptionLabel(heading: HeadingEntry): string {
+  if (heading.sectionNumber !== null) {
+    return `${heading.sectionNumber}. ${heading.text}`;
+  }
+  const indent = "–".repeat(Math.max(0, heading.level - 1));
+  return indent ? `${indent} ${heading.text}` : heading.text;
 }
 
 /** Compact outline snapshot of the current doc for the draft_section prompt. */

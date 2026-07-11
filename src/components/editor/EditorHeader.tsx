@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, memo } from "react";
 import { Editor } from "@tiptap/react";
 import { Link } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import {
   ChevronLeft,
   Undo2,
@@ -217,201 +218,202 @@ const EditorHeader = memo(
         <div className="editor-header-inner">
           {/* ── LEFT ── */}
           <div className="flex items-center gap-1.5">
-          <Link
-            to="/create"
-            title={isThai ? "กลับไปหน้าสร้าง" : "Back to create"}
-            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          >
-            <ChevronLeft size={14} strokeWidth={1.8} />
-            <span>{isThai ? "สร้าง" : "Create"}</span>
-          </Link>
-          <div className="mx-1 h-4 w-px bg-border" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={title}
-            onChange={handleTitleChange}
-            placeholder="Untitled"
-            className="w-48 bg-transparent text-sm font-medium text-foreground placeholder:text-muted-foreground/40 outline-none transition-colors hover:text-foreground focus:placeholder:opacity-0"
-          />
-          <div className="mx-1 h-4 w-px bg-border" />
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground/60">
-            {isSaving && (
-              <>
-                <Loader2 size={12} className="animate-spin" />
-                <span>{isThai ? "กำลังบันทึก…" : "Saving…"}</span>
-              </>
-            )}
-            {!isSaving && !isDirty && (
-              <>
-                <Save size={12} />
-                <span>{isThai ? "บันทึกแล้ว" : "Saved"}</span>
-              </>
-            )}
-            {!isSaving && isDirty && (
-              <button
-                onClick={handleSave}
-                title={isThai ? "บันทึก" : "Save"}
-                className="flex items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:bg-accent text-muted-foreground"
-              >
-                <Save size={12} />
-                <span>{isThai ? "บันทึก?" : "Save?"}</span>
-              </button>
-            )}
-          </div>
-          <div className="mx-1.5 h-4 w-px bg-border" />
-          <IconBtn
-            title={isThai ? "ย้อนกลับ" : "Undo"}
-            onClick={handleUndo}
-            disabled={!canUndo}
-          >
-            <div className="flex">
-              <p>{isThai ? "ย้อนกลับ" : "Undo"}</p>
-              <Undo2 size={15} strokeWidth={1.8} />
+            <Link
+              to="/create"
+              title={isThai ? "กลับไปหน้าสร้าง" : "Back to create"}
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <ChevronLeft size={14} strokeWidth={1.8} />
+              <span>{isThai ? "สร้าง" : "Create"}</span>
+            </Link>
+            <div className="mx-1 h-4 w-px bg-border" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={title}
+              onChange={handleTitleChange}
+              placeholder="Untitled"
+              className="w-32 bg-transparent text-sm font-medium text-foreground placeholder:text-muted-foreground/40 outline-none transition-colors hover:text-foreground focus:placeholder:opacity-0"
+            />
+            <div className="mx-1 h-4 w-px bg-border" />
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground/60">
+              {isSaving && (
+                <>
+                  <Loader2 size={12} className="animate-spin" />
+                  <span>{isThai ? "กำลังบันทึก…" : "Saving…"}</span>
+                </>
+              )}
+              {!isSaving && !isDirty && (
+                <>
+                  <Save size={12} />
+                  <span>{isThai ? "บันทึกแล้ว" : "Saved"}</span>
+                </>
+              )}
+              {!isSaving && isDirty && (
+                <button
+                  onClick={handleSave}
+                  title={isThai ? "บันทึก" : "Save"}
+                  className="flex items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:bg-accent text-muted-foreground"
+                >
+                  <Save size={12} />
+                  <span>{isThai ? "บันทึก?" : "Save?"}</span>
+                </button>
+              )}
             </div>
-          </IconBtn>
-          <IconBtn
-            title={isThai ? "ทำซ้ำ" : "Redo"}
-            onClick={handleRedo}
-            disabled={!canRedo}
-          >
-            <div className="flex">
-              <Redo2 size={15} strokeWidth={1.8} />
-              <p>{isThai ? "ทำซ้ำ" : "Redo"}</p>
-            </div>
-          </IconBtn>
-          <div className="mx-1 h-4 w-px bg-border" />
-          <AiWritingAssistant editor={editor} />
+            <div className="mx-1.5 h-4 w-px bg-border" />
+            <IconBtn
+              title={isThai ? "ย้อนกลับ" : "Undo"}
+              onClick={handleUndo}
+              disabled={!canUndo}
+            >
+              <div className="flex">
+                <p>{isThai ? "ย้อนกลับ" : "Undo"}</p>
+                <Undo2 size={15} strokeWidth={1.8} />
+              </div>
+            </IconBtn>
+            <IconBtn
+              title={isThai ? "ทำซ้ำ" : "Redo"}
+              onClick={handleRedo}
+              disabled={!canRedo}
+            >
+              <div className="flex">
+                <Redo2 size={15} strokeWidth={1.8} />
+                <p>{isThai ? "ทำซ้ำ" : "Redo"}</p>
+              </div>
+            </IconBtn>
+            <div className="mx-1 h-4 w-px bg-border" />
+            <AiWritingAssistant editor={editor} />
           </div>
 
           {/* ── RIGHT ── */}
           <div className="flex items-center gap-1.5">
-          <ThemeToggle compact />
-          <div className="mx-1 h-4 w-px bg-border" />
-          {/* ── DYNAMIC UPDATE TOGGLE ── */}
-          <button
-            onClick={handleDynamicToggle}
-            title={
-              dynamicUpdate
-                ? isThai
-                  ? "โหมดสด: ทูลบาร์ติดตามตำแหน่งเคอร์เซอร์ คลิกเพื่อปิด"
-                  : "Live mode: toolbar tracks cursor position. Click to disable."
-                : isThai
-                  ? "โหมดคงที่: ทูลบาร์ไม่ติดตามเคอร์เซอร์ คลิกเพื่อเปิด"
-                  : "Static mode: toolbar won't track cursor. Click to enable."
-            }
-            className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors ${
-              dynamicUpdate
-                ? "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                : "bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50"
-            }`}
-          >
-            {dynamicUpdate ? (
-              <Zap size={12} strokeWidth={1.8} />
-            ) : (
-              <ZapOff size={12} strokeWidth={1.8} />
-            )}
-            <span>
-              {dynamicUpdate
-                ? isThai
-                  ? "สด"
-                  : "Live"
-                : isThai
-                  ? "คงที่"
-                  : "Static"}
-            </span>
-          </button>
-
-          <div className="mx-1 h-4 w-px bg-border" />
-
-          {/* ── ZOOM CONTROLS ── */}
-          <span className="text-xs text-muted-foreground px-1 select-none">
-            {isThai ? "ซูม:" : "Zoom:"}
-          </span>
-          <div className="flex items-center gap-0.5 rounded-md border border-border/60 px-1 py-0.5">
+            <ThemeToggle compact />
+            <LanguageToggle compact />
+            <div className="mx-1 h-4 w-px bg-border" />
+            {/* ── DYNAMIC UPDATE TOGGLE ── */}
             <button
-              onClick={handleZoomOut}
-              disabled={zoom <= ZOOM_MIN}
-              title={isThai ? "ซูมออก" : "Zoom out"}
-              className="flex items-center justify-center w-5 h-5 rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+              onClick={handleDynamicToggle}
+              title={
+                dynamicUpdate
+                  ? isThai
+                    ? "โหมดสด: ทูลบาร์ติดตามตำแหน่งเคอร์เซอร์ คลิกเพื่อปิด"
+                    : "Live mode: toolbar tracks cursor position. Click to disable."
+                  : isThai
+                    ? "โหมดคงที่: ทูลบาร์ไม่ติดตามเคอร์เซอร์ คลิกเพื่อเปิด"
+                    : "Static mode: toolbar won't track cursor. Click to enable."
+              }
+              className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors ${
+                dynamicUpdate
+                  ? "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                  : "bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50"
+              }`}
             >
-              <ZoomOut size={12} strokeWidth={1.8} />
-            </button>
-
-            <button
-              onClick={handleZoomReset}
-              title={isThai ? "รีเซ็ตซูม (100%)" : "Reset zoom (100%)"}
-              className="relative flex items-center justify-center h-5 rounded px-0.5 transition-colors hover:bg-accent group"
-              style={{ minWidth: "2.5rem" }}
-            >
-              {!zoomInputFocused && (
-                <span className="text-xs text-muted-foreground group-hover:text-foreground tabular-nums">
-                  {Math.round(zoom * 100)}%
-                </span>
+              {dynamicUpdate ? (
+                <Zap size={12} strokeWidth={1.8} />
+              ) : (
+                <ZapOff size={12} strokeWidth={1.8} />
               )}
-              <input
-                type="text"
-                value={zoomInputValue}
-                onChange={handleZoomInputChange}
-                onFocus={() => setZoomInputFocused(true)}
-                onBlur={commitZoomInput}
-                onKeyDown={handleZoomInputKeyDown}
-                className={`absolute inset-0 w-full text-center text-xs bg-accent text-foreground outline-none rounded tabular-nums transition-opacity ${
-                  zoomInputFocused
-                    ? "opacity-100"
-                    : "opacity-0 pointer-events-none"
-                }`}
-                aria-label="Zoom percentage"
-              />
+              <span>
+                {dynamicUpdate
+                  ? isThai
+                    ? "สด"
+                    : "Live"
+                  : isThai
+                    ? "คงที่"
+                    : "Static"}
+              </span>
             </button>
+
+            <div className="mx-1 h-4 w-px bg-border" />
+
+            {/* ── ZOOM CONTROLS ── */}
+            <span className="text-xs text-muted-foreground px-1 select-none">
+              {isThai ? "ซูม:" : "Zoom:"}
+            </span>
+            <div className="flex items-center gap-0.5 rounded-md border border-border/60 px-1 py-0.5">
+              <button
+                onClick={handleZoomOut}
+                disabled={zoom <= ZOOM_MIN}
+                title={isThai ? "ซูมออก" : "Zoom out"}
+                className="flex items-center justify-center w-5 h-5 rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+              >
+                <ZoomOut size={12} strokeWidth={1.8} />
+              </button>
+
+              <button
+                onClick={handleZoomReset}
+                title={isThai ? "รีเซ็ตซูม (100%)" : "Reset zoom (100%)"}
+                className="relative flex items-center justify-center h-5 rounded px-0.5 transition-colors hover:bg-accent group"
+                style={{ minWidth: "2.5rem" }}
+              >
+                {!zoomInputFocused && (
+                  <span className="text-xs text-muted-foreground group-hover:text-foreground tabular-nums">
+                    {Math.round(zoom * 100)}%
+                  </span>
+                )}
+                <input
+                  type="text"
+                  value={zoomInputValue}
+                  onChange={handleZoomInputChange}
+                  onFocus={() => setZoomInputFocused(true)}
+                  onBlur={commitZoomInput}
+                  onKeyDown={handleZoomInputKeyDown}
+                  className={`absolute inset-0 w-full text-center text-xs bg-accent text-foreground outline-none rounded tabular-nums transition-opacity ${
+                    zoomInputFocused
+                      ? "opacity-100"
+                      : "opacity-0 pointer-events-none"
+                  }`}
+                  aria-label="Zoom percentage"
+                />
+              </button>
+
+              <button
+                onClick={handleZoomIn}
+                disabled={zoom >= ZOOM_MAX}
+                title={isThai ? "ซูมเข้า" : "Zoom in"}
+                className="flex items-center justify-center w-5 h-5 rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+              >
+                <ZoomIn size={12} strokeWidth={1.8} />
+              </button>
+            </div>
+
+            <div className="mx-1 h-4 w-px bg-border" />
 
             <button
-              onClick={handleZoomIn}
-              disabled={zoom >= ZOOM_MAX}
-              title={isThai ? "ซูมเข้า" : "Zoom in"}
-              className="flex items-center justify-center w-5 h-5 rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+              onClick={handleLinkToggle}
+              title={
+                linkClickMode === "ctrl"
+                  ? isThai
+                    ? "ลิงก์เปิดด้วย Ctrl+คลิก"
+                    : "Links open on Ctrl+Click"
+                  : isThai
+                    ? "ลิงก์เปิดด้วยคลิก"
+                    : "Links open on Click"
+              }
+              className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors ${
+                linkClickMode === "direct"
+                  ? "bg-accent text-foreground font-medium"
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+              }`}
             >
-              <ZoomIn size={12} strokeWidth={1.8} />
-            </button>
-          </div>
-
-          <div className="mx-1 h-4 w-px bg-border" />
-
-          <button
-            onClick={handleLinkToggle}
-            title={
-              linkClickMode === "ctrl"
+              <Link2 size={12} strokeWidth={1.8} />
+              <p>{isThai ? "ลิงก์:" : "Link:"}</p>
+              {linkClickMode === "direct"
                 ? isThai
-                  ? "ลิงก์เปิดด้วย Ctrl+คลิก"
-                  : "Links open on Ctrl+Click"
+                  ? "เปิดเมื่อคลิก"
+                  : "Open on Click"
                 : isThai
-                  ? "ลิงก์เปิดด้วยคลิก"
-                  : "Links open on Click"
-            }
-            className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors ${
-              linkClickMode === "direct"
-                ? "bg-accent text-foreground font-medium"
-                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-            }`}
-          >
-            <Link2 size={12} strokeWidth={1.8} />
-            <p>{isThai ? "ลิงก์:" : "Link:"}</p>
-            {linkClickMode === "direct"
-              ? isThai
-                ? "เปิดเมื่อคลิก"
-                : "Open on Click"
-              : isThai
-                ? "เปิดเมื่อ Ctrl+คลิก"
-                : "Open on Ctrl+Click"}
-          </button>
-          <div className="mx-1.5 h-4 w-px bg-border" />
-          <AiCriticButton editor={editor} />
-          <button
-            className="rounded-full bg-editor-highlight px-4 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
-            onClick={handlePublic}
-          >
-            {isThai ? "เผยแพร่" : "Publish"}
-          </button>
+                  ? "เปิดเมื่อ Ctrl+คลิก"
+                  : "Open on Ctrl+Click"}
+            </button>
+            <div className="mx-1.5 h-4 w-px bg-border" />
+            <AiCriticButton editor={editor} />
+            <button
+              className="rounded-full bg-editor-highlight px-4 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+              onClick={handlePublic}
+            >
+              {isThai ? "เผยแพร่" : "Publish"}
+            </button>
           </div>
         </div>
       </>

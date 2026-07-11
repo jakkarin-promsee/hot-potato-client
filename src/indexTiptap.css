@@ -560,7 +560,11 @@ button.bg-editor-highlight {
   margin-top: 1.25em;
 }
 
-/* Top-level H2 sections: auto 1. 2. 3. — teachers type the title only. */
+/* Top-level H2 sections: auto 1. 2. 3. — resets after each H1 title. */
+.tiptap-editor .ProseMirror > h1 {
+  counter-reset: lesson-section;
+}
+
 .tiptap-editor .ProseMirror > h2 {
   counter-increment: lesson-section;
 }

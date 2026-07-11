@@ -17,6 +17,7 @@ import { useEditorI18n } from "../editor.i18n";
 import {
   caretInsertPoint,
   docEndPos,
+  formatHeadingOptionLabel,
   insertMarkdownAt,
   listHeadings,
   outlineSnapshot,
@@ -375,7 +376,7 @@ export default function AiDraftDialog({
                     >
                       {headings.map((h, i) => (
                         <option key={`${h.insertPos}-${i}`} value={i}>
-                          {"–".repeat(Math.max(0, h.level - 1))} {h.text}
+                          {formatHeadingOptionLabel(h)}
                         </option>
                       ))}
                     </select>

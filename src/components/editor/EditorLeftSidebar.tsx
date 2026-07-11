@@ -576,7 +576,7 @@ const TextPanel = memo(
         />
         <ToolBtn
           icon={Heading1}
-          label={t("Heading 1", "หัวข้อ 1")}
+          label={t("Title", "ชื่อเรื่อง")}
           active={active.h1}
           onClick={() =>
             editor.chain().focus().toggleHeading({ level: 1 }).run()

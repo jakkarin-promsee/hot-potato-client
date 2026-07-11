@@ -1,5 +1,6 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { QRCodeSVG } from "qrcode.react";
 import {
   Check,
   Copy,
@@ -155,12 +156,16 @@ function PublishSettingsModal({ open, onClose }: PublishSettingsModalProps) {
   const [shareCopied, setShareCopied] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [qrFullscreen, setQrFullscreen] = useState(false);
+  const [qrFullscreenSize, setQrFullscreenSize] = useState(480);
   // ✨ AI autofill (Tier 3.5.F) — fills the form fields; saving stays manual
   const [aiMetaLoading, setAiMetaLoading] = useState(false);
   const [aiMetaError, setAiMetaError] = useState(false);
   const [aiAgentLoading, setAiAgentLoading] = useState(false);
   const [aiAgentError, setAiAgentError] = useState(false);
   const [aiAgentReason, setAiAgentReason] = useState("");
+  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
+  const [closeLoading, setCloseLoading] = useState(false);
 
   const contentId = useCanvasStore((s) => s.contentId);
   const title = useCanvasStore((s) => s.title);
@@ -171,6 +176,7 @@ function PublishSettingsModal({ open, onClose }: PublishSettingsModalProps) {
   const description = useCanvasStore((s) => s.description);
   const agentSettings = useCanvasStore((s) => s.agentSettings);
   const isSaving = useCanvasStore((s) => s.isSaving);
+  const isDirty = useCanvasStore((s) => s.isDirty);
   const setTitle = useCanvasStore((s) => s.setTitle);
   const setTitleImage = useCanvasStore((s) => s.setTitleImage);
   const setCollaborators = useCanvasStore((s) => s.setCollaborators);
@@ -180,27 +186,91 @@ function PublishSettingsModal({ open, onClose }: PublishSettingsModalProps) {
   const setAgentSettings = useCanvasStore((s) => s.setAgentSettings);
   const saveContent = useCanvasStore((s) => s.saveContent);
   const forceSave = useCanvasStore((s) => s.forceSave);
+  const loadContent = useCanvasStore((s) => s.loadContent);
   const upload = useUploadStore((s) => s.upload);
   const isUploading = useUploadStore((s) => s.isUploading);
   const { t } = useEditorI18n();
+  const shareUrl = contentId
+    ? `${window.location.origin}/view/${contentId}`
+    : "";
+
+  const resetLocalDrafts = useCallback(() => {
+    setCollaboratorDraft("");
+    setTopicDraft("");
+  }, []);
+
+  const requestClose = useCallback(() => {
+    if (!isDirty) {
+      resetLocalDrafts();
+      onClose();
+      return;
+    }
+    setCloseConfirmOpen(true);
+  }, [isDirty, onClose, resetLocalDrafts]);
+
+  const handleDiscardAndClose = useCallback(async () => {
+    setCloseLoading(true);
+    try {
+      if (contentId) {
+        await loadContent(contentId);
+      }
+      resetLocalDrafts();
+      setCloseConfirmOpen(false);
+      onClose();
+    } finally {
+      setCloseLoading(false);
+    }
+  }, [contentId, loadContent, onClose, resetLocalDrafts]);
+
+  const handleSaveAndClose = useCallback(async () => {
+    setCloseLoading(true);
+    try {
+      await saveContent();
+      resetLocalDrafts();
+      setCloseConfirmOpen(false);
+      onClose();
+    } finally {
+      setCloseLoading(false);
+    }
+  }, [onClose, resetLocalDrafts, saveContent]);
 
   useEffect(() => {
     if (!open) return;
 
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (galleryOpen) setGalleryOpen(false);
-        else onClose();
+      if (e.key !== "Escape") return;
+      if (closeConfirmOpen) {
+        setCloseConfirmOpen(false);
+        return;
       }
+      if (qrFullscreen) setQrFullscreen(false);
+      else if (galleryOpen) setGalleryOpen(false);
+      else requestClose();
     };
 
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
-  }, [open, onClose, galleryOpen]);
+  }, [open, galleryOpen, qrFullscreen, requestClose, closeConfirmOpen]);
 
   useEffect(() => {
-    if (!open) setGalleryOpen(false);
+    if (!open) {
+      setGalleryOpen(false);
+      setQrFullscreen(false);
+      setCloseConfirmOpen(false);
+    }
   }, [open]);
+
+  useEffect(() => {
+    if (!qrFullscreen) return;
+    const updateSize = () => {
+      setQrFullscreenSize(
+        Math.floor(Math.min(window.innerWidth, window.innerHeight) * 0.82),
+      );
+    };
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, [qrFullscreen]);
 
   const addCollaborator = () => {
     const next = collaboratorDraft.trim();
@@ -254,8 +324,7 @@ function PublishSettingsModal({ open, onClose }: PublishSettingsModalProps) {
   };
 
   const handleCopyShare = async () => {
-    if (!contentId) return;
-    const shareUrl = `${window.location.origin}/view/${contentId}`;
+    if (!shareUrl) return;
     await navigator.clipboard.writeText(shareUrl);
     setShareCopied(true);
     setTimeout(() => setShareCopied(false), 1600);
@@ -281,9 +350,8 @@ function PublishSettingsModal({ open, onClose }: PublishSettingsModalProps) {
     }
   };
 
-  const handleSaveAndClose = async () => {
+  const handleSaveSettings = async () => {
     await saveContent();
-    onClose();
   };
 
   // Empty fields fill silently; existing content asks one confirm first.
@@ -369,13 +437,15 @@ function PublishSettingsModal({ open, onClose }: PublishSettingsModalProps) {
     <>
       <div
         className="fixed inset-0 z-80 flex items-center justify-center bg-black/60 p-4"
-        onMouseDown={onClose}
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) requestClose();
+        }}
       >
         <div
-          className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl border border-border bg-background shadow-2xl"
+          className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-border bg-background shadow-2xl"
           onMouseDown={(e) => e.stopPropagation()}
         >
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+        <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-border bg-background px-5 py-4">
           <div>
             <h2 className="text-base font-semibold">
               {t("Publish settings", "ตั้งค่าการเผยแพร่")}
@@ -387,11 +457,12 @@ function PublishSettingsModal({ open, onClose }: PublishSettingsModalProps) {
               )}
             </p>
           </div>
-          <Button variant="ghost" size="icon-sm" onClick={onClose}>
+          <Button variant="ghost" size="icon-sm" onClick={requestClose}>
             <X className="size-4" />
           </Button>
         </div>
 
+        <div className="flex-1 overflow-y-auto">
         <div className="grid gap-5 p-5 md:grid-cols-2">
           <div className="md:col-span-2">
             <Button
@@ -400,7 +471,7 @@ function PublishSettingsModal({ open, onClose }: PublishSettingsModalProps) {
               size="sm"
               onClick={() => void handleAutofillMeta()}
               disabled={aiMetaLoading || !contentId}
-              className="gap-2"
+              className="gap-2 border-primary/40 bg-primary/5 text-xs font-semibold text-primary hover:bg-primary/10 hover:text-primary disabled:opacity-30"
             >
               {aiMetaLoading ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -591,7 +662,7 @@ function PublishSettingsModal({ open, onClose }: PublishSettingsModalProps) {
             />
           </div>
 
-          <div className="space-y-4 md:col-span-2">
+          <div className="mt-2 space-y-4 border-t-2 border-border pt-5 md:col-span-2">
             <div>
               <h3 className="text-sm font-semibold text-foreground">
                 {t("AI Tutor", "AI ติวเตอร์")}
@@ -608,7 +679,7 @@ function PublishSettingsModal({ open, onClose }: PublishSettingsModalProps) {
                 size="sm"
                 onClick={() => void handleSuggestAgentSettings()}
                 disabled={aiAgentLoading || !contentId}
-                className="mt-2 gap-2"
+                className="mt-2 gap-2 border-primary/40 bg-primary/5 text-xs font-semibold text-primary hover:bg-primary/10 hover:text-primary disabled:opacity-30"
               >
                 {aiAgentLoading ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -745,15 +816,80 @@ function PublishSettingsModal({ open, onClose }: PublishSettingsModalProps) {
             </div>
           </div>
 
-          <div className="rounded-lg border border-border/70 bg-muted/20 p-3 md:col-span-2">
-            <p className="text-xs text-muted-foreground">
-              {t("Share link: ", "ลิงก์แชร์: ")}
-              {contentId ? `${window.location.origin}/view/${contentId}` : "-"}
-            </p>
+          <div className="mt-2 space-y-4 border-t-2 border-border pt-5 md:col-span-2">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">
+                {t("Sharing", "การแชร์")}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {t(
+                  "Students scan the QR code to open this lesson, or use the link below.",
+                  "ให้นักเรียนสแกน QR code เพื่อเปิดบทเรียนนี้ หรือใช้ลิงก์ด้านล่าง",
+                )}
+              </p>
+            </div>
+
+            {contentId ? (
+              <div className="flex flex-col items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setQrFullscreen(true)}
+                  title={t("Tap to enlarge QR code", "แตะเพื่อขยาย QR code")}
+                  className="rounded-xl border border-border bg-white p-4 transition hover:border-primary/50 hover:shadow-md"
+                >
+                  <QRCodeSVG
+                    value={shareUrl}
+                    size={180}
+                    level="M"
+                    marginSize={0}
+                  />
+                </button>
+                <p className="text-[11px] text-muted-foreground">
+                  {t("Tap the QR code to show it full screen", "แตะ QR code เพื่อขยายเต็มจอ")}
+                </p>
+
+                <div className="w-full space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">
+                    {t("Public link", "ลิงก์สาธารณะ")}
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      readOnly
+                      value={shareUrl}
+                      onFocus={(e) => e.currentTarget.select()}
+                      className="flex-1 text-xs"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleCopyShare}
+                      className="shrink-0 gap-2"
+                    >
+                      {shareCopied ? (
+                        <Check className="size-4 text-green-500" />
+                      ) : (
+                        <Copy className="size-4" />
+                      )}
+                      {shareCopied
+                        ? t("Copied", "คัดลอกแล้ว")
+                        : t("Copy", "คัดลอก")}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {t(
+                  "Save the lesson first to get a shareable link.",
+                  "บันทึกบทเรียนก่อน แล้วจะได้ลิงก์สำหรับแชร์",
+                )}
+              </p>
+            )}
           </div>
         </div>
+        </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-5 py-4">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border px-5 py-4">
           <Button
             variant="destructive"
             onClick={handleDelete}
@@ -768,17 +904,7 @@ function PublishSettingsModal({ open, onClose }: PublishSettingsModalProps) {
           </Button>
 
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={handleCopyShare} disabled={!contentId}>
-              {shareCopied ? (
-                <Check className="size-4 text-green-500" />
-              ) : (
-                <Copy className="size-4" />
-              )}
-              {shareCopied
-                ? t("Copied", "คัดลอกแล้ว")
-                : t("Share link", "คัดลอกลิงก์")}
-            </Button>
-            <Button variant="outline" onClick={handleSaveAndClose} disabled={isSaving}>
+            <Button variant="outline" onClick={handleSaveSettings} disabled={isSaving}>
               {isSaving ? <Loader2 className="size-4 animate-spin" /> : null}
               {t("Save settings", "บันทึกการตั้งค่า")}
             </Button>
@@ -793,12 +919,97 @@ function PublishSettingsModal({ open, onClose }: PublishSettingsModalProps) {
         </div>
       </div>
       </div>
+      {qrFullscreen && shareUrl && (
+        <div className="fixed inset-0 z-100 flex flex-col items-center justify-center bg-black/90 p-6">
+          <button
+            type="button"
+            aria-label={t("Close", "ปิด")}
+            className="absolute inset-0"
+            onClick={() => setQrFullscreen(false)}
+          />
+          <button
+            type="button"
+            onClick={() => setQrFullscreen(false)}
+            className="relative z-10 mb-4 flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20"
+          >
+            <X size={18} />
+          </button>
+          <div
+            className="relative z-10 rounded-2xl bg-white p-6 shadow-2xl"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <QRCodeSVG
+              value={shareUrl}
+              size={qrFullscreenSize}
+              level="M"
+              marginSize={2}
+            />
+          </div>
+          <p className="relative z-10 mt-5 max-w-md text-center text-sm text-white/80">
+            {t(
+              "Point the camera at this code to open the lesson",
+              "ให้นักเรียนสแกนโค้ดนี้เพื่อเปิดบทเรียน",
+            )}
+          </p>
+        </div>
+      )}
       {galleryOpen && (
         <TitleImageGalleryModal
           currentUrl={titleImage}
           onPick={(url) => setTitleImage(url)}
           onClose={() => setGalleryOpen(false)}
         />
+      )}
+      {closeConfirmOpen && (
+        <div
+          className="fixed inset-0 z-90 flex items-center justify-center bg-black/50 p-4"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setCloseConfirmOpen(false);
+          }}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl border border-border bg-background p-5 shadow-2xl"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-base font-semibold">
+              {t("Do you want to save?", "ต้องการบันทึกหรือไม่?")}
+            </h3>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              {t(
+                "You have unsaved changes in publish settings.",
+                "มีการแก้ไขการตั้งค่าการเผยแพร่ที่ยังไม่ได้บันทึก",
+              )}
+            </p>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setCloseConfirmOpen(false)}
+                disabled={closeLoading}
+              >
+                {t("Cancel", "ยกเลิก")}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => void handleDiscardAndClose()}
+                disabled={closeLoading}
+              >
+                {closeLoading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : null}
+                {t("Don't save", "ไม่บันทึก")}
+              </Button>
+              <Button
+                onClick={() => void handleSaveAndClose()}
+                disabled={closeLoading}
+              >
+                {closeLoading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : null}
+                {t("Save", "บันทึก")}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

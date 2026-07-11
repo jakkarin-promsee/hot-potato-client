@@ -6,6 +6,7 @@ import { Markdown } from "tiptap-markdown";
 import type { Editor as ReactEditor } from "@tiptap/react";
 import {
   docEndPos,
+  formatHeadingOptionLabel,
   insertMarkdownAt,
   isDocEffectivelyEmpty,
   listHeadings,
@@ -44,9 +45,36 @@ describe("listHeadings / outlineSnapshot", () => {
     const headings = listHeadings(asReact(editor));
     expect(headings.map((h) => h.text)).toEqual(["บทนำ", "แรงเสียดทาน"]);
     expect(headings.map((h) => h.level)).toEqual([2, 3]);
+    expect(headings.map((h) => h.sectionNumber)).toEqual([1, null]);
+    expect(formatHeadingOptionLabel(headings[0])).toBe("1. บทนำ");
+    expect(formatHeadingOptionLabel(headings[1])).toBe("–– แรงเสียดทาน");
     // insertPos = right after the heading node
     expect(headings[0].insertPos).toBeGreaterThan(0);
     expect(outlineSnapshot(asReact(editor))).toBe("## บทนำ\n### แรงเสียดทาน");
+    editor.destroy();
+  });
+
+  it("numbers only top-level H2 sections in display order", () => {
+    const editor = makeEditor(
+      "<h2>หนึ่ง</h2><h2>สอง</h2><blockquote><h2>ใน quote</h2></blockquote>",
+    );
+    const headings = listHeadings(asReact(editor));
+    expect(headings.map((h) => h.sectionNumber)).toEqual([1, 2, null]);
+    expect(formatHeadingOptionLabel(headings[0])).toBe("1. หนึ่ง");
+    expect(formatHeadingOptionLabel(headings[1])).toBe("2. สอง");
+    expect(formatHeadingOptionLabel(headings[2])).toBe("– ใน quote");
+    editor.destroy();
+  });
+
+  it("resets H2 section numbers after each top-level H1", () => {
+    const editor = makeEditor(
+      "<h1>บทที่หนึ่ง</h1><h2>เปิด</h2><h2>ปิด</h2><h1>บทที่สอง</h1><h2>เริ่มใหม่</h2>",
+    );
+    const headings = listHeadings(asReact(editor));
+    expect(headings.map((h) => h.sectionNumber)).toEqual([null, 1, 2, null, 1]);
+    expect(formatHeadingOptionLabel(headings[1])).toBe("1. เปิด");
+    expect(formatHeadingOptionLabel(headings[2])).toBe("2. ปิด");
+    expect(formatHeadingOptionLabel(headings[4])).toBe("1. เริ่มใหม่");
     editor.destroy();
   });
 
