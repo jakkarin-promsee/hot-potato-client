@@ -2,7 +2,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import "@/indexTiptap.css";
 
 import EditorHeader from "./EditorHeader";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCanvasContext } from "@/contexts/CanvasContext";
 
 import EditorLeftSidebar from "./EditorLeftSidebar";
@@ -193,24 +193,6 @@ const TipTapEditor = () => {
       window.removeEventListener("keydown", onKeyDown, { capture: true });
   }, []);
 
-  // ── Focus at the end of editor ──────────────────────────────────────────────
-  // use at main div, if users click outside editor
-  // but still be in the main edge, the cursor will move to the end of editor
-  const handleEditorClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (!editor || editor.isFocused) return;
-
-      // Don't steal focus if the click was inside a custom block (NodeView)
-      const target = e.target as HTMLElement;
-      if (target.closest("[data-node-view-wrapper]")) return;
-      // Modal overlays (e.g. AiDraftDialog) must keep focus on their inputs.
-      if (target.closest("[data-editor-modal]")) return;
-
-      editor.commands.focus("end");
-    },
-    [editor],
-  );
-
   // ── Ctrl+Scroll zoom ──────────────────────────────────────────────────────
   useEffect(() => {
     const el = mainRef.current;
@@ -344,7 +326,7 @@ const TipTapEditor = () => {
         </aside>
 
         {/* ── CENTER EDITOR ── */}
-        <main ref={mainRef} className="editor-main" onClick={handleEditorClick}>
+        <main ref={mainRef} className="editor-main">
           {/* Page Range (px <-> editor <-> px) */}
           {/* CSS `zoom` scales layout height along with the visuals, so the
               scroll extent of .editor-main always matches what's on screen
