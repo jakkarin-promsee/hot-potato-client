@@ -41,7 +41,7 @@ const ROLE_CARDS: RoleCard[] = [
       th: "สร้างบทเรียนยังไง: เขียนเนื้อหา แทรกคำถาม ให้ AI ช่วย แล้วเผยแพร่และแชร์ให้นักเรียน",
       en: "How to create: write content, embed questions, lean on the AI copilot, then publish and share.",
     },
-    badge: { th: "กำลังจัดทำ", en: "in progress" },
+    badge: { th: "10 ขั้นตอน", en: "10 steps" },
   },
   {
     to: "/explore",

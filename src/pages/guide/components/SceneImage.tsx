@@ -7,6 +7,9 @@ import type { SceneImageRef } from "../scenes";
 export function SceneImage({ image }: { image: SceneImageRef }) {
   const { t } = useAppI18n();
   const dims = GUIDE_IMAGES[image.file];
+  // Landscape shots (the teacher editor) get more width; portrait phone/element
+  // shots stay narrow so they don't blow up. Falls back to narrow if unknown.
+  const landscape = dims ? dims.width > dims.height : false;
 
   return (
     <img
@@ -15,7 +18,9 @@ export function SceneImage({ image }: { image: SceneImageRef }) {
       loading="lazy"
       width={dims?.width}
       height={dims?.height}
-      className="w-full max-w-sm rounded-xl border border-border bg-card shadow-sm"
+      className={`w-full rounded-xl border border-border bg-card shadow-sm ${
+        landscape ? "max-w-2xl" : "max-w-sm"
+      }`}
     />
   );
 }

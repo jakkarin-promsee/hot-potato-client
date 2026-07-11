@@ -20,4 +20,9 @@ export interface GuideScene {
   tip?: BilingualText;
   images: SceneImageRef[];
   cta?: { to: string; label: BilingualText };
+  /**
+   * Stacked full-width layout instead of the phone-first zigzag — for the
+   * teacher guide's wide desktop screenshots (steps on top, big shots below).
+   */
+  wide?: boolean;
 }

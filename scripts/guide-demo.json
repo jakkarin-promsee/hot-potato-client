@@ -1,6 +1,8 @@
 {
   "api": "http://localhost:5000/api",
   "demoLessonId": "6a51eb0d3a42702940ce234f",
+  "scratchLessonId": "6a5206253a42702940ce2367",
+  "blankLessonId": "6a5206263a42702940ce2368",
   "publicTestLessonId": "69e39d0b60d467bd515a4945",
   "teacherEmail": "guide.teacher@hotpotato.local",
   "studentEmail": "guide.student@hotpotato.local",

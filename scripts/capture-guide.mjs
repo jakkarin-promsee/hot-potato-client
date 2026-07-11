@@ -17,6 +17,7 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import sharp from "sharp";
+import { buildScratchDoc, scratchTitle } from "./guide-demo-docs.mjs";
 
 const args = process.argv.slice(2);
 const getArg = (name, fallback) => {
@@ -49,6 +50,42 @@ async function login(email) {
   });
   if (!res.ok) throw new Error(`login ${email} failed: ${res.status}`);
   return res.json(); // { user, token }
+}
+
+// The teacher-editing scenes mutate the scratch lesson in the browser (insert
+// blocks, run AI). The editor autosaves, so reset the doc to its baseline via
+// the API before each mutating scene — keeps every capture run deterministic.
+let teacherToken = null;
+async function resetScratch() {
+  if (!teacherToken) return;
+  await fetch(`${API}/content/${demo.scratchLessonId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${teacherToken}`,
+    },
+    body: JSON.stringify({
+      clientUpdatedAt: "", // force save (skip 409)
+      title: scratchTitle,
+      access_type: "private",
+      tiptap_json: JSON.stringify(buildScratchDoc()),
+    }),
+  });
+}
+
+const CANVAS_SCRATCH = () => `${BASE}/canvas/${demo.scratchLessonId}`;
+
+/** Wait until the desktop editor has painted the scratch lesson's H1. */
+async function waitForEditor(page, headingText = "แรงและการเคลื่อนที่") {
+  await page.locator(".ProseMirror").first().waitFor({ timeout: 30_000 });
+  await page.locator(".ProseMirror").getByText(headingText).first().waitFor({ timeout: 30_000 });
+  await page.waitForTimeout(500); // let sidebars settle (canvas sync clears at ~10ms)
+}
+
+/** Click a left-rail category by its Thai label (AI · ข้อความ · สื่อ · สูตร · คำถาม). */
+async function openCategory(page, label) {
+  await page.getByTitle(label, { exact: true }).first().click();
+  await page.waitForTimeout(400);
 }
 
 /** Wait until no "AI กำลังพิมพ์ / Waking the AI" indicator remains on the page. */
@@ -256,6 +293,279 @@ const SCENES = [
       return null;
     },
   },
+
+  // ── creating-showcase (teacher) — desktop 1280, logged in as the demo teacher.
+  // The editor is desktop-only; these scenes drive the real editor and reset the
+  // scratch lesson between mutations (resetScratch) so runs are deterministic.
+  {
+    out: "creating-01-create-page.webp",
+    viewport: "desktop",
+    auth: "teacher",
+    run: async (page) => {
+      await page.goto(`${BASE}/create`);
+      await page.getByText(/เนื้อหาของคุณ|Your Content/).first().waitFor({ timeout: 30_000 });
+      await page.waitForTimeout(800); // let the lesson grid load
+      return null;
+    },
+  },
+  {
+    out: "creating-02-blank-editor.webp",
+    viewport: "desktop",
+    auth: "teacher",
+    run: async (page) => {
+      await page.goto(`${BASE}/canvas/${demo.blankLessonId}`);
+      await page
+        .getByText("หน้าว่างอยู่ใช่ไหม ให้ AI ช่วยเริ่มได้นะ ✨")
+        .first()
+        .waitFor({ timeout: 30_000 });
+      await page.waitForTimeout(500);
+      return null;
+    },
+  },
+  {
+    out: "creating-03-editor-overview.webp",
+    viewport: "desktop",
+    auth: "teacher",
+    run: async (page) => {
+      await resetScratch();
+      await page.goto(CANVAS_SCRATCH());
+      await waitForEditor(page);
+      return null; // full editor — the scene labels the 4 regions in copy
+    },
+  },
+  {
+    out: "creating-04-writing.webp",
+    viewport: "desktop",
+    auth: "teacher",
+    run: async (page) => {
+      await resetScratch();
+      await page.goto(CANVAS_SCRATCH());
+      await waitForEditor(page);
+      await openCategory(page, "ข้อความ");
+      // Select a paragraph so the right sidebar flips to its text-format panel.
+      await page
+        .locator(".ProseMirror p")
+        .filter({ hasText: "แรงคือการผลักหรือดึง" })
+        .first()
+        .click({ clickCount: 3 });
+      await page.waitForTimeout(500);
+      return null;
+    },
+  },
+  {
+    out: "creating-05a-media.webp",
+    viewport: "desktop",
+    auth: "teacher",
+    run: async (page) => {
+      await resetScratch();
+      await page.goto(CANVAS_SCRATCH());
+      await waitForEditor(page);
+      await openCategory(page, "สื่อ");
+      // Wait for the vault thumbnails to actually decode (they're loading="lazy").
+      await page
+        .waitForFunction(
+          () => {
+            const imgs = [...document.querySelectorAll(".editor-sidebar-left img")];
+            return imgs.length >= 4 && imgs.slice(0, 4).every((i) => i.naturalWidth > 0);
+          },
+          { timeout: 15_000 },
+        )
+        .catch(() => {});
+      await page.waitForTimeout(400);
+      return null;
+    },
+  },
+  {
+    out: "creating-05b-canvas.webp",
+    viewport: "desktop",
+    auth: "teacher",
+    run: async (page) => {
+      await resetScratch();
+      await page.goto(CANVAS_SCRATCH());
+      await waitForEditor(page);
+      await openCategory(page, "ข้อความ");
+      await page.getByRole("button", { name: /เพิ่มกระดานแคนวาส/ }).click();
+      // The fabric canvas takes over both sidebars once its node registers.
+      await page.waitForTimeout(1_500);
+      return null;
+    },
+  },
+  {
+    out: "creating-06-formula.webp",
+    viewport: "desktop",
+    auth: "teacher",
+    ai: true,
+    run: async (page) => {
+      await resetScratch();
+      await page.goto(CANVAS_SCRATCH());
+      await waitForEditor(page);
+      await openCategory(page, "สูตร");
+      // Place the cursor in the doc so the block inserts inside the lesson.
+      await page.locator(".ProseMirror p").first().click();
+      await page.getByRole("button", { name: /เพิ่มบล็อกสูตร/ }).click();
+      await page.waitForTimeout(800);
+      const block = page
+        .locator("[data-node-view-wrapper]")
+        .filter({ hasText: /บล็อกสูตร/ })
+        .first();
+      await block.waitFor({ timeout: 15_000 });
+      await block.scrollIntoViewIfNeeded();
+      // Open the "let AI write the LaTeX" panel and generate from a human-typed formula.
+      await block.getByText("ให้ AI เขียนสูตร").first().click();
+      await block.getByPlaceholder(/s = ut/).fill("s = ut + 1/2at^2");
+      await block.getByPlaceholder(/สมการการเคลื่อนที่|equation of motion/).fill("สมการการเคลื่อนที่");
+      try {
+        await block.getByRole("button", { name: /^สร้างสูตร$|Generate formula/ }).click();
+        // Rendered KaTeX appears once the AI returns valid LaTeX.
+        await block.locator(".katex").first().waitFor({ timeout: 60_000 });
+        await page.waitForTimeout(500);
+      } catch {
+        /* AI hiccup — the filled panel is still a usable screenshot */
+      }
+      await block.scrollIntoViewIfNeeded();
+      return block;
+    },
+  },
+  {
+    out: "creating-07a-question-panel.webp",
+    viewport: "desktop",
+    auth: "teacher",
+    run: async (page) => {
+      await resetScratch();
+      await page.goto(CANVAS_SCRATCH());
+      await waitForEditor(page);
+      await openCategory(page, "คำถาม");
+      await page.waitForTimeout(500);
+      return null;
+    },
+  },
+  {
+    out: "creating-07b-question-creator.webp",
+    viewport: "desktop",
+    auth: "teacher",
+    ai: true,
+    run: async (page) => {
+      await resetScratch();
+      await page.goto(CANVAS_SCRATCH());
+      await waitForEditor(page);
+      await openCategory(page, "คำถาม");
+      await page.getByRole("button", { name: /คำตอบเชิงอธิบาย/ }).click();
+      await page.waitForTimeout(600);
+      const card = page
+        .locator("[data-node-view-wrapper]")
+        .filter({ hasText: /คำถามแบบเขียน/ })
+        .first();
+      await card.waitFor({ timeout: 15_000 });
+      await card.scrollIntoViewIfNeeded();
+      await card
+        .getByPlaceholder(/พิมพ์คำถามแบบเขียน/)
+        .fill("ทำไมรถที่กำลังวิ่งถึงไม่หยุดทันทีเมื่อเราเลิกเหยียบคันเร่ง?");
+      try {
+        await card.getByRole("button", { name: /ให้ AI ร่างแนวเฉลย/ }).click();
+        await card.getByText(/แนวเฉลยที่ AI ร่าง|AI draft/).first().waitFor({ timeout: 60_000 });
+        await page.waitForTimeout(500);
+      } catch {
+        /* AI hiccup — the creator card with the question is still usable */
+      }
+      await card.scrollIntoViewIfNeeded();
+      return card;
+    },
+  },
+  {
+    out: "creating-08a-ai-hub.webp",
+    viewport: "desktop",
+    auth: "teacher",
+    run: async (page) => {
+      await resetScratch();
+      await page.goto(CANVAS_SCRATCH());
+      await waitForEditor(page);
+      await openCategory(page, "AI");
+      await page.getByText("1 · เริ่มบทเรียน").first().waitFor({ timeout: 15_000 });
+      await page.waitForTimeout(400);
+      return null;
+    },
+  },
+  {
+    out: "creating-08b-draft-preview.webp",
+    viewport: "desktop",
+    auth: "teacher",
+    ai: true,
+    run: async (page) => {
+      await resetScratch();
+      await page.goto(CANVAS_SCRATCH());
+      await waitForEditor(page);
+      await openCategory(page, "AI");
+      await page.getByRole("button", { name: /ร่างโครงบทเรียน/ }).click();
+      const dialog = page.locator("[data-editor-modal]").first();
+      await dialog.waitFor({ timeout: 15_000 });
+      await dialog.getByPlaceholder(/แรงและการเคลื่อนที่|Force and motion/).fill("แรงและการเคลื่อนที่");
+      await dialog.locator("select").first().selectOption("ม.1");
+      try {
+        // "ร่างโครง" names both the tab and the submit button — the submit is last.
+        await dialog.getByRole("button", { name: /^ร่างโครง$|^Draft outline$/ }).last().click();
+        await dialog
+          .getByRole("button", { name: /แทรกลงบทเรียน|Insert into lesson/ })
+          .waitFor({ timeout: 90_000 });
+        await page.waitForTimeout(600);
+      } catch {
+        /* AI hiccup — the filled dialog is still a usable screenshot */
+      }
+      return null; // modal fills the viewport
+    },
+  },
+  {
+    out: "creating-09a-critic.webp",
+    viewport: "desktop",
+    auth: "teacher",
+    ai: true,
+    run: async (page) => {
+      await resetScratch();
+      await page.goto(CANVAS_SCRATCH());
+      await waitForEditor(page);
+      await page.getByRole("button", { name: /ตรวจบทเรียน/ }).click();
+      await page.getByText("ผลตรวจบทเรียนจาก AI").first().waitFor({ timeout: 15_000 });
+      try {
+        // The critic auto-runs on open; wait for the checklist section to render.
+        await page.getByText(/เช็กลิสต์บทเรียน|Checklist/).first().waitFor({ timeout: 90_000 });
+        await page.waitForTimeout(600);
+      } catch {
+        /* still shows the loading/summary state */
+      }
+      return null;
+    },
+  },
+  {
+    out: "creating-09b-publish-modal.webp",
+    viewport: "desktop",
+    auth: "teacher",
+    run: async (page) => {
+      await resetScratch();
+      await page.goto(CANVAS_SCRATCH());
+      await waitForEditor(page);
+      await page.getByRole("button", { name: /^เผยแพร่$|^Publish$/ }).click();
+      await page.getByText(/ตั้งค่าการเผยแพร่|Publish settings/).first().waitFor({ timeout: 15_000 });
+      // Show "public" selected so the scene reads as "publishing to Explore".
+      await page.getByRole("button", { name: /^สาธารณะ$|^Public$/ }).click();
+      await page.waitForTimeout(600);
+      return null;
+    },
+  },
+  {
+    out: "creating-10-share.webp",
+    viewport: "desktop",
+    auth: "teacher",
+    run: async (page) => {
+      await resetScratch();
+      await page.goto(CANVAS_SCRATCH());
+      await waitForEditor(page);
+      await page.getByRole("button", { name: /^เผยแพร่$|^Publish$/ }).click();
+      await page.getByText(/ตั้งค่าการเผยแพร่|Publish settings/).first().waitFor({ timeout: 15_000 });
+      // Scroll the modal to the sharing section (QR code + copy link).
+      await page.getByText(/^การแชร์$|^Sharing$/).first().scrollIntoViewIfNeeded();
+      await page.waitForTimeout(600);
+      return null;
+    },
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -273,6 +583,7 @@ async function main() {
   }
   if (scenes.some((s) => s.auth === "teacher")) {
     sessions.teacher = await login(demo.teacherEmail);
+    teacherToken = sessions.teacher.token; // used by resetScratch()
   }
 
   const browser = await chromium.launch();

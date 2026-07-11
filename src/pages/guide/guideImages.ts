@@ -2,6 +2,20 @@
 // Maps guide image filenames to intrinsic dimensions so <img> tags reserve
 // space (no layout shift) without hand-typing sizes.
 export const GUIDE_IMAGES: Record<string, { width: number; height: number }> = {
+  "creating-01-create-page.webp": { width: 2560, height: 1600 },
+  "creating-02-blank-editor.webp": { width: 2560, height: 1600 },
+  "creating-03-editor-overview.webp": { width: 2560, height: 1600 },
+  "creating-04-writing.webp": { width: 2560, height: 1600 },
+  "creating-05a-media.webp": { width: 2560, height: 1600 },
+  "creating-05b-canvas.webp": { width: 2560, height: 1600 },
+  "creating-06-formula.webp": { width: 800, height: 1170 },
+  "creating-07a-question-panel.webp": { width: 2560, height: 1600 },
+  "creating-07b-question-creator.webp": { width: 800, height: 1172 },
+  "creating-08a-ai-hub.webp": { width: 2560, height: 1600 },
+  "creating-08b-draft-preview.webp": { width: 2560, height: 1600 },
+  "creating-09a-critic.webp": { width: 2560, height: 1600 },
+  "creating-09b-publish-modal.webp": { width: 2560, height: 1600 },
+  "creating-10-share.webp": { width: 2560, height: 1600 },
   "learning-01-landing.webp": { width: 780, height: 1688 },
   "learning-02-explore.webp": { width: 780, height: 1688 },
   "learning-03-viewer.webp": { width: 780, height: 1688 },
