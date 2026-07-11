@@ -1,3 +1,33 @@
+# components/ — shared React components
+
+> Updated 2026-07-11 · this README does **double duty**: (1) a map of this folder (right below), then (2) the original **Editor Data Flow** deep-dive (further down). Related: [`../../docs/editor-internals.md`](../../docs/editor-internals.md) (node system), [`../../../docs/ui-structure.md`](../../../docs/ui-structure.md) (UI map).
+
+Reusable components across pages. The lesson **editor** is the big subfolder (`editor/`); shadcn primitives are in `ui/`.
+
+## Loose components (this folder)
+
+| File | What it does |
+| --- | --- |
+| `TopNav.tsx` | The top navigation bar (in `AppLayout`); different items logged-in vs anonymous |
+| `ProtectedRoute.tsx` | Hard route guard — redirects to `/login` with `state.from` |
+| `RequireLogin.tsx` | Soft route guard — inline "please sign in" prompt (`title`/`description` props) |
+| `PublicRoute.tsx` | Inverse guard — bounces logged-in users away (e.g. off `/login`) |
+| `NavLink.tsx` | Router link wrapper |
+| `TopNav`/`ThemeToggle.tsx`/`LanguageToggle.tsx` | Theme + language switchers |
+| `PageLoader.tsx` | The `<Suspense>` fallback for lazy routes |
+| `ContentCard.tsx` | Lesson card used on Dashboard/Explore |
+| `TutorMemoryCard.tsx` | Profile card: view + wipe tutor memory (`/chat/memory`) |
+| `CloudinaryUpload.tsx` | The image-upload component (the `/uploadimage` page is a thin wrapper) |
+
+## Subfolders (own READMEs)
+
+| Folder | What |
+| --- | --- |
+| `editor/` | The TipTap + Fabric lesson editor — shell, sidebars, viewer, `extensions/` (nodes), `ai/` (copilot), `FormulaBlock/`, `config/` |
+| `ui/` | shadcn/ui primitives |
+
+---
+
 # Editor Data Flow
 
 ## Dependencies
