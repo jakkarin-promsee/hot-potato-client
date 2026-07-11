@@ -1,0 +1,8 @@
+{
+  "api": "http://localhost:5000/api",
+  "demoLessonId": "6a51eb0d3a42702940ce234f",
+  "publicTestLessonId": "69e39d0b60d467bd515a4945",
+  "teacherEmail": "guide.teacher@hotpotato.local",
+  "studentEmail": "guide.student@hotpotato.local",
+  "note": "Passwords are NOT stored here — pass --password / GUIDE_DEMO_PASSWORD (default in seed script header)."
+}
