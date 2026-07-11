@@ -1,4 +1,5 @@
 import { useAuthStore } from "@/stores/auth.store";
+import { useThemeStore } from "@/stores/theme.store";
 import { isSafeRedirectTarget } from "@/lib/axios";
 import { useAppI18n } from "@/lib/i18n";
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
@@ -55,6 +56,8 @@ const Login = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { t, isThai } = useAppI18n();
+  const { theme } = useThemeStore();
+  const googleButtonTheme = theme === "dark" ? "outline" : "filled_blue";
 
   // Read per render (not module scope) so tests can stub the env var.
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as
@@ -329,6 +332,7 @@ const Login = () => {
                     }
                     locale={isThai ? "th" : "en"}
                     text={isSignUp ? "signup_with" : "signin_with"}
+                    theme={googleButtonTheme}
                     width={300}
                   />
                 </GoogleOAuthProvider>

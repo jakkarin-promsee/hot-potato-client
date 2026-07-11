@@ -5,8 +5,6 @@ import { act } from "react";
 import { MemoryRouter } from "react-router-dom";
 import Landing from "../Landing";
 import { useLanguageStore } from "@/stores/language.store";
-import { BRAND_NAME } from "@/lib/brand";
-
 let container: HTMLDivElement | null = null;
 let root: Root | null = null;
 
@@ -37,9 +35,9 @@ afterEach(() => {
 });
 
 describe("Landing (landing + guide hub merged)", () => {
-  it("renders the hero with the brand name and the explore CTA", () => {
+  it("renders the hero and the explore CTA", () => {
     const el = renderLanding();
-    expect(el.textContent).toContain(BRAND_NAME);
+    expect(el.textContent).toContain("เรียนรู้อย่าง");
     expect(el.textContent).toContain("เริ่มสำรวจเลย");
 
     const hrefs = [...el.querySelectorAll("a")].map((a) => a.getAttribute("href"));

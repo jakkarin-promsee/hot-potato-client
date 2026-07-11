@@ -10,10 +10,15 @@ const mockLoginWithGoogle = vi.fn();
 const mockRegister = vi.fn();
 const mockNavigate = vi.fn();
 let language: "en" | "th" = "en";
+let theme: "light" | "dark" = "light";
 
 vi.mock("@/stores/language.store", () => ({
   useLanguageStore: (selector: (s: { language: "en" | "th" }) => unknown) =>
     selector({ language }),
+}));
+
+vi.mock("@/stores/theme.store", () => ({
+  useThemeStore: () => ({ theme }),
 }));
 
 vi.mock("@/stores/auth.store", () => ({
@@ -34,11 +39,14 @@ vi.mock("@react-oauth/google", () => ({
   ),
   GoogleLogin: ({
     onSuccess,
+    theme: googleTheme,
   }: {
     onSuccess: (r: { credential?: string }) => void;
+    theme?: string;
   }) => (
     <button
       type="button"
+      data-google-theme={googleTheme}
       onClick={() => onSuccess({ credential: "fake-google-credential" })}
     >
       Mock Google
@@ -91,6 +99,7 @@ afterEach(() => {
 
 beforeEach(() => {
   language = "en";
+  theme = "light";
   mockLogin.mockReset();
   mockLoginWithGoogle.mockReset();
   mockRegister.mockReset();
@@ -215,6 +224,20 @@ describe("Login page", () => {
     });
 
     expect(mockNavigate).toHaveBeenCalledWith("/explore", { replace: true });
+  });
+
+  it("uses filled_blue Google button theme in light mode", () => {
+    theme = "light";
+    const el = renderLogin();
+    const googleBtn = el.querySelector("[data-google-theme]");
+    expect(googleBtn?.getAttribute("data-google-theme")).toBe("filled_blue");
+  });
+
+  it("uses outline Google button theme in dark mode", () => {
+    theme = "dark";
+    const el = renderLogin();
+    const googleBtn = el.querySelector("[data-google-theme]");
+    expect(googleBtn?.getAttribute("data-google-theme")).toBe("outline");
   });
 
   it("signs in with Google and redirects", async () => {

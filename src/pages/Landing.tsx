@@ -8,7 +8,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAppI18n } from "@/lib/i18n";
 import { OWNER_FACEBOOK_URL } from "@/lib/contact";
-import { BRAND_NAME } from "@/lib/brand";
 
 // / — the single front door (2026-07-11: Landing and the /guide hub merged;
 // /guide now redirects here). Hero pitch → role cards routing to the two
@@ -66,12 +65,6 @@ export default function Landing() {
     <div className="pb-24 md:pb-12">
       {/* Hero */}
       <section className="relative container flex flex-col items-center px-4 pt-16 pb-4 text-center">
-        <div className="animate-fade-in">
-          <span className="mb-4 inline-block rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-            🥔 {BRAND_NAME}
-          </span>
-        </div>
-
         <h1
           className="animate-fade-in max-w-2xl font-serif text-4xl font-bold leading-tight tracking-tight sm:text-5xl"
           style={{ animationDelay: "0.1s" }}
