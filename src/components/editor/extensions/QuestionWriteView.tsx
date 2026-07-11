@@ -7,8 +7,10 @@ import {
   Eye,
   EyeOff,
   HelpCircle,
+  Sparkles,
   SquareDashedMousePointer,
 } from "lucide-react";
+import { callCreator } from "@/lib/creatorApi";
 import FeedbackDiscussionPanel, {
   type FeedbackThreadMessage,
 } from "./FeedbackDiscussionPanel";
@@ -80,6 +82,7 @@ function CreatorView({
   onFlush,
 }: CreatorViewProps) {
   const { t } = useEditorI18n();
+  const contentId = useCanvasStore((s) => s.contentId);
   const [question, setQuestion] = useState(initialQuestion);
   const [answer, setAnswer] = useState(initialAnswer);
   const [feedbackMode, setFeedbackMode] = useState<QuestionFeedbackMode>(
@@ -88,9 +91,37 @@ function CreatorView({
   const questionRef = useAutoGrow(question);
   const answerRef = useAutoGrow(answer);
 
+  // ✨ AI guide-answer draft (Tier 3.5.B) — preview → accept, never auto-fill
+  const [aiDraft, setAiDraft] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(false);
+
   useEffect(() => setQuestion(initialQuestion), [initialQuestion]);
   useEffect(() => setAnswer(initialAnswer), [initialAnswer]);
   useEffect(() => setFeedbackMode(initialFeedbackMode), [initialFeedbackMode]);
+
+  const handleDraftGuideAnswer = async () => {
+    if (!contentId || !question.trim()) return;
+    setAiLoading(true);
+    setAiError(false);
+    try {
+      const { guideAnswer } = await callCreator(contentId, "guide_answer", {
+        question: question.trim().slice(0, 2000),
+      });
+      setAiDraft(guideAnswer);
+    } catch {
+      setAiError(true);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const acceptAiDraft = () => {
+    if (aiDraft === null) return;
+    setAnswer(aiDraft);
+    onFlush(question, aiDraft, feedbackMode);
+    setAiDraft(null);
+  };
 
   return (
     <div
@@ -124,6 +155,51 @@ function CreatorView({
         onBlur={() => onFlush(question, answer, feedbackMode)}
         className="w-full resize-none overflow-hidden rounded-lg border border-gray-200 bg-white px-3 py-2 text-base text-gray-800 placeholder:text-gray-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
       />
+
+      {!answer.trim() && aiDraft === null && (
+        <button
+          type="button"
+          onClick={() => void handleDraftGuideAnswer()}
+          disabled={aiLoading || !question.trim() || !contentId}
+          className="flex w-fit items-center gap-1.5 rounded-md border border-dashed border-violet-300 px-3 py-1.5 text-xs font-medium text-violet-600 transition hover:border-violet-400 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          {aiLoading
+            ? t("Drafting…", "กำลังร่างแนวเฉลย…")
+            : t("Let AI draft a guide answer", "ให้ AI ร่างแนวเฉลย")}
+        </button>
+      )}
+
+      {aiError && (
+        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-900">
+          {t("AI is busy, try again 🥔", "AI ไม่ว่างแป๊บนึง ลองอีกทีนะ 🥔")}
+        </p>
+      )}
+
+      {aiDraft !== null && (
+        <div className="rounded-lg border border-violet-200 bg-violet-50 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-600">
+            {t("AI draft — review first", "แนวเฉลยที่ AI ร่าง — ตรวจก่อนใช้นะ")}
+          </p>
+          <p className="mt-1 whitespace-pre-wrap text-sm text-violet-900">{aiDraft}</p>
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={acceptAiDraft}
+              className="rounded-md bg-violet-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-violet-700"
+            >
+              {t("Use this", "ใช้อันนี้")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setAiDraft(null)}
+              className="rounded-md border border-violet-200 px-3 py-1 text-xs text-violet-700 transition hover:bg-violet-100"
+            >
+              {t("Discard", "ทิ้ง")}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

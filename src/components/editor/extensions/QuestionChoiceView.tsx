@@ -20,10 +20,13 @@ import MarkdownMessage from "./MarkdownMessage";
 import SuggestionChips from "./SuggestionChips";
 import { evaluateChoiceAnswer } from "./questionEvaluation";
 
+import { callCreator } from "@/lib/creatorApi";
+
 import {
   Minus,
   Plus,
   HelpCircle,
+  Sparkles,
   SquareDashedMousePointer,
   Eye,
   EyeOff,
@@ -168,12 +171,18 @@ function CreatorView({
   onCommit,
 }: CreatorViewProps) {
   const { t } = useEditorI18n();
+  const contentId = useCanvasStore((s) => s.contentId);
   const [question, setQuestion] = useState(initialQuestion);
   const [choices, setChoices] = useState(initialChoices);
   const [answerType, setAnswerType] = useState(initialAnswerType);
   const [feedbackMode, setFeedbackMode] =
     useState<QuestionFeedbackMode>(initialFeedbackMode);
   const questionRef = useAutoGrow(question);
+
+  // ✨ AI distractor suggestions (Tier 3.5.B) — preview → accept
+  const [aiDistractors, setAiDistractors] = useState<string[] | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(false);
 
   // Re-sync on undo/redo
   useEffect(() => {
@@ -236,6 +245,39 @@ function CreatorView({
     const next = choices.filter((_, i) => i !== index);
     setChoices(next);
     onCommit(question, next, answerType, feedbackMode);
+  };
+
+  const correctChoice = choices.find((c) => c.correct && c.text.trim());
+
+  const handleSuggestDistractors = async () => {
+    if (!contentId || !correctChoice) return;
+    setAiLoading(true);
+    setAiError(false);
+    try {
+      const { distractors } = await callCreator(contentId, "distractors", {
+        question: question.trim().slice(0, 2000),
+        correctText: correctChoice.text.trim().slice(0, 500),
+        existing: choices
+          .filter((c) => !c.correct)
+          .map((c) => c.text.trim())
+          .filter(Boolean)
+          .slice(0, 8),
+      });
+      setAiDistractors(distractors);
+    } catch {
+      setAiError(true);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleAddDistractor = (text: string) => {
+    const next = [...choices, { text, correct: false }];
+    setChoices(next);
+    onCommit(question, next, answerType, feedbackMode);
+    setAiDistractors((prev) =>
+      prev ? prev.filter((d) => d !== text) : prev,
+    );
   };
 
   return (
@@ -309,15 +351,72 @@ function CreatorView({
         ))}
       </div>
 
-      {/* Add choice */}
-      <button
-        type="button"
-        onClick={handleAddChoice}
-        className="flex w-fit items-center gap-1.5 rounded-md border border-dashed border-violet-300 px-3 py-1.5 text-xs font-medium text-violet-600 transition hover:border-violet-400 hover:bg-violet-50"
-      >
-        <Plus className="h-3.5 w-3.5" />
-        {t("Add choice", "เพิ่มตัวเลือก")}
-      </button>
+      {/* Add choice + AI distractors */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={handleAddChoice}
+          className="flex w-fit items-center gap-1.5 rounded-md border border-dashed border-violet-300 px-3 py-1.5 text-xs font-medium text-violet-600 transition hover:border-violet-400 hover:bg-violet-50"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          {t("Add choice", "เพิ่มตัวเลือก")}
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleSuggestDistractors()}
+          disabled={aiLoading || !contentId || !question.trim() || !correctChoice}
+          title={
+            correctChoice
+              ? undefined
+              : t(
+                  "Mark a correct choice first",
+                  "ติ๊กคำตอบถูกก่อน AI ถึงจะคิดตัวลวงให้ได้",
+                )
+          }
+          className="flex w-fit items-center gap-1.5 rounded-md border border-dashed border-violet-300 px-3 py-1.5 text-xs font-medium text-violet-600 transition hover:border-violet-400 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          {aiLoading
+            ? t("Thinking…", "กำลังคิดตัวลวง…")
+            : t("AI distractors", "ให้ AI เพิ่มตัวลวง")}
+        </button>
+      </div>
+
+      {aiError && (
+        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-900">
+          {t("AI is busy, try again 🥔", "AI ไม่ว่างแป๊บนึง ลองอีกทีนะ 🥔")}
+        </p>
+      )}
+
+      {aiDistractors !== null && aiDistractors.length > 0 && (
+        <div className="rounded-lg border border-violet-200 bg-violet-50 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-600">
+            {t(
+              "AI distractor ideas — tap to add",
+              "ตัวลวงที่ AI เสนอ — แตะเพื่อเพิ่ม",
+            )}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {aiDistractors.map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => handleAddDistractor(d)}
+                className="flex items-center gap-1 rounded-full border border-violet-300 bg-white px-3 py-1 text-xs text-violet-700 transition hover:bg-violet-100"
+              >
+                <Plus className="h-3 w-3" /> {d}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setAiDistractors(null)}
+            className="mt-2 text-[11px] text-violet-500 underline transition hover:text-violet-700"
+          >
+            {t("Dismiss", "ปิดข้อเสนอ")}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -24,6 +24,7 @@ import {
   Sigma,
   ChevronDown,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import { useUploadStore } from "@/stores/cloudinary.store";
 import { useCategoryStore } from "@/stores/category.store";
@@ -33,6 +34,7 @@ import {
   subscribeActiveFormulaBlock,
 } from "./FormulaBlock/formulaToolbarBus";
 import { createFormulaRow } from "./FormulaBlock/formulaReducer";
+import AiQuestionDialog from "./ai/AiQuestionDialog";
 import { useEditorI18n } from "./editor.i18n";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -952,8 +954,23 @@ const FormularPanel = memo(({ editor }: { editor: Editor }) => {
 
 const SpecialPanel = memo(({ editor }: { editor: Editor }) => {
   const { t } = useEditorI18n();
+  const [showAiDialog, setShowAiDialog] = useState(false);
   return (
   <div className="flex flex-col gap-1.5">
+    <PanelLabel>{t("AI Helper", "ผู้ช่วย AI")}</PanelLabel>
+    <div className="px-2 pb-1">
+      <button
+        type="button"
+        onClick={() => setShowAiDialog(true)}
+        className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/15"
+      >
+        <Sparkles size={14} strokeWidth={2} />
+        {t("Generate questions with AI", "สร้างคำถามด้วย AI")}
+      </button>
+    </div>
+    {showAiDialog && (
+      <AiQuestionDialog editor={editor} onClose={() => setShowAiDialog(false)} />
+    )}
     <PanelLabel>{t("Choose Block Type", "เลือกประเภทบล็อก")}</PanelLabel>
     <div className="grid grid-cols-1 gap-3 px-2 py-0.5">
       <SpecialBlockBtn
