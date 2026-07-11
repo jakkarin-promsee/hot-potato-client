@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useAuthStore } from "./stores/auth.store";
 
@@ -31,11 +31,14 @@ const queryClient = new QueryClient();
 const App = () => {
   const token = useAuthStore((s) => s.token);
   const recheckToken = useAuthStore((s) => s.recheckToken);
+  const didRecheckOnMount = useRef(false);
 
+  // Re-validate persisted token once on mount (sliding session). Guard with a ref
+  // because recheck issues a fresh JWT and would retrigger a token-dependent effect.
   useEffect(() => {
-    if (token) {
-      void recheckToken();
-    }
+    if (didRecheckOnMount.current || !token) return;
+    didRecheckOnMount.current = true;
+    void recheckToken();
   }, [token, recheckToken]);
 
   return (

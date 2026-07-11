@@ -87,6 +87,15 @@ function isAtTopOfVerticalScrollChain(
 /** Cap for the reading-position hint sent as `currentSection` (server caps at 500). */
 const CURRENT_SECTION_MAX_CHARS = 300;
 
+function parseTiptapContent(json: string) {
+  if (!json || json === "{}") return "";
+  try {
+    return JSON.parse(json);
+  } catch {
+    return "";
+  }
+}
+
 function TiptapViewer({ onScrollDirectionChange }: TiptapViewerProps) {
   const navigate = useNavigate();
   const mainRef = useRef<HTMLDivElement>(null);
@@ -102,6 +111,7 @@ function TiptapViewer({ onScrollDirectionChange }: TiptapViewerProps) {
 
   const { tiptapJson, contentId, ownerId, collaborators } = useCanvasStore();
   const userId = useAuthStore((s) => s.user?.id ?? null);
+  const token = useAuthStore((s) => s.token);
 
   const canEditContent = useMemo(() => {
     if (!contentId || !userId || !ownerId) return false;
@@ -112,6 +122,7 @@ function TiptapViewer({ onScrollDirectionChange }: TiptapViewerProps) {
     );
   }, [collaborators, contentId, ownerId, userId]);
   const answers = useAnswerStore((s) => s.answers);
+  const answerContentId = useAnswerStore((s) => s.contentId);
   const setAnswer = useAnswerStore((s) => s.setAnswer);
   const savedLessonAi = answers[LESSON_AI_BLOCK_ID] as
     | LessonAiAnswer
@@ -124,24 +135,35 @@ function TiptapViewer({ onScrollDirectionChange }: TiptapViewerProps) {
   );
 
   useEffect(() => {
+    setChatHistory([]);
+    setAiSuggestions([]);
+    setIsAiOpen(false);
+    setQuestionInput("");
+    setAskError(false);
+    setIsConfirmClear(false);
+    setStreamingText("");
+  }, [contentId]);
+
+  useEffect(() => {
+    if (!token || !contentId || answerContentId !== contentId) return;
     if (!savedLessonAi) return;
     setChatHistory(savedLessonAi.chatHistory ?? []);
     setAiSuggestions(savedLessonAi.suggestions ?? []);
     if (typeof savedLessonAi.open === "boolean") {
       setIsAiOpen(savedLessonAi.open);
     }
-  }, [answers[LESSON_AI_BLOCK_ID]]);
+  }, [contentId, token, answerContentId, answers[LESSON_AI_BLOCK_ID]]);
 
   const editor = useEditor({
     extensions: createEditorExtensions(false),
     editable: false,
-    content: tiptapJson && tiptapJson !== "{}" ? JSON.parse(tiptapJson) : "",
+    content: parseTiptapContent(tiptapJson),
   });
 
   // Set content once editor + data are ready
   useEffect(() => {
     if (editor && tiptapJson && tiptapJson !== "{}") {
-      editor.commands.setContent(JSON.parse(tiptapJson));
+      editor.commands.setContent(parseTiptapContent(tiptapJson));
     }
   }, [editor, tiptapJson]);
 

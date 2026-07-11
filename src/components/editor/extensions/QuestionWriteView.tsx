@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { NodeViewWrapper, NodeViewProps } from "@tiptap/react";
 import { NodeSelection } from "@tiptap/pm/state";
 import { useAnswerStore } from "@/stores/content-answer.store";
@@ -26,6 +26,7 @@ import AiErrorRetry from "./AiErrorRetry";
 import MarkdownMessage from "./MarkdownMessage";
 import SuggestionChips from "./SuggestionChips";
 import BlockMoveControls from "./BlockMoveControls";
+import { useAutoGrow } from "./useAutoGrow";
 import { useEditorI18n } from "../editor.i18n";
 
 export interface QuestionWriteAttrs {
@@ -42,26 +43,6 @@ interface BlockAnswer {
   feedbackThread?: FeedbackThreadMessage[];
   threadOpen?: boolean;
   suggestions?: string[];
-}
-
-function useAutoGrow(value: string) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-
-  const resize = useCallback(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, []);
-
-  useEffect(resize, [value, resize]);
-
-  useEffect(() => {
-    const raf = requestAnimationFrame(resize);
-    return () => cancelAnimationFrame(raf);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  return ref;
 }
 
 interface CreatorViewProps {

@@ -58,44 +58,6 @@ const IMAGE_ALIGNS = [
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Extract numeric width from Cloudinary URL if present */
-function parseCloudinaryTransform(src: string): {
-  baseUrl: string;
-  width?: number;
-  height?: number;
-} {
-  // Match: .../upload/c_crop,h_NNN,w_NNN,x_NNN,y_NNN/... or .../upload/w_NNN,h_NNN/...
-  const uploadIdx = src.indexOf("/upload/");
-  if (uploadIdx === -1) return { baseUrl: src };
-
-  const afterUpload = src.slice(uploadIdx + 8);
-  const slashIdx = afterUpload.indexOf("/");
-  if (slashIdx === -1) return { baseUrl: src };
-
-  const transforms = afterUpload.slice(0, slashIdx);
-  const rest = afterUpload.slice(slashIdx);
-
-  const wMatch = transforms.match(/\bw_(\d+)/);
-  const hMatch = transforms.match(/\bh_(\d+)/);
-
-  // Remove existing w_/h_ resize transforms to get a clean base
-  const baseTransforms = transforms
-    .split(",")
-    .filter((t) => !t.startsWith("w_") && !t.startsWith("h_") && t !== "")
-    .join(",");
-
-  const baseUrl =
-    src.slice(0, uploadIdx + 8) +
-    (baseTransforms ? baseTransforms + "/" : "") +
-    rest.slice(1); // remove leading slash from rest
-
-  return {
-    baseUrl: src.slice(0, uploadIdx + 8) + rest.slice(1),
-    width: wMatch ? parseInt(wMatch[1] as string) : undefined,
-    height: hMatch ? parseInt(hMatch[1] as string) : undefined,
-  };
-}
-
 /** Build a Cloudinary crop+resize URL — always rebuilds from the clean original */
 function buildCropUrl(
   originalSrc: string,
@@ -840,12 +802,12 @@ export const ImagePanel = memo(
     // Track the "original" src (before any crop) per session
     const originalSrcRef = useRef<string>(imageAttrs.src);
 
-    // When panel mounts for a new image, reset
+    // Reset crop/resize session state when the panel opens for an image
     useEffect(() => {
       originalSrcRef.current = imageAttrs.src;
       setIsCropping(false);
       setResizePct(100);
-    }, []); // only on mount
+    }, []); // remount via key when the selected image node changes
 
     // ── Find the actual <img> element in the editor DOM ──────────────────────
     const getImgElement = useCallback((): HTMLImageElement | null => {

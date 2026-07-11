@@ -17,7 +17,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import { ChevronDown, Sparkles, X } from "lucide-react";
-import { callCreator, type ProofreadPreset } from "@/lib/creatorApi";
+import { callCreator } from "@/lib/creatorApi";
 import { useCanvasStore } from "@/stores/canvas.store";
 import { useColdStartHint } from "@/hooks/useColdStartHint";
 import MarkdownMessage from "../extensions/MarkdownMessage";
@@ -89,7 +89,7 @@ export function WritingPreviewDialog({
     try {
       const { markdown } = await callCreator(contentId, "proofread", {
         markdown: job.selection.text.slice(0, 12000),
-        preset: job.action.preset as ProofreadPreset,
+        preset: job.action.preset,
         gradeLevel: job.action.needsGradeLevel ? grade : undefined,
       });
       setResult(markdown);

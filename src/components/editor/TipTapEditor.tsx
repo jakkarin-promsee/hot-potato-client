@@ -34,7 +34,7 @@ const TipTapEditor = () => {
   const [zoom, setZoom] = useState(1.0);
   const mainRef = useRef<HTMLDivElement>(null);
 
-  const { tiptapJson, setTiptapJson, saveContent, isDirty } = useCanvasStore();
+  const { tiptapJson, setTiptapJson, saveContent } = useCanvasStore();
 
   const conflict = useCanvasStore((s) => s.conflict);
   const forceSave = useCanvasStore((s) => s.forceSave);
@@ -161,7 +161,6 @@ const TipTapEditor = () => {
 
     if (currentJson !== tiptapJson) {
       editor.commands.setContent(JSON.parse(tiptapJson));
-      // The 'false' parameter tells Tiptap not to emit an update event
     }
   }, [editor, tiptapJson]);
 

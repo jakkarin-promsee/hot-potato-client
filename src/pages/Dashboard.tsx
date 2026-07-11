@@ -10,8 +10,8 @@ import {
   Loader2,
   Clock,
 } from "lucide-react";
-import { useAuthStore } from "../stores/auth.store";
-import { useContentStore } from "../stores/content.store";
+import { useAuthStore } from "@/stores/auth.store";
+import { useContentStore } from "@/stores/content.store";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,8 +69,12 @@ const Dashboard = () => {
 
   const handleCreate = async () => {
     setCreating(true);
-    const content_id = await createContent();
-    navigate(`/canvas/${content_id}`);
+    try {
+      const content_id = await createContent();
+      navigate(`/canvas/${content_id}`);
+    } catch {
+      setCreating(false);
+    }
   };
 
   const confirmDelete = async () => {

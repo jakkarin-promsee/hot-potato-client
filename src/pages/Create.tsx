@@ -45,9 +45,14 @@ export default function CreatorDashboard() {
 
   const handleCreate = async () => {
     setCreating(true);
-    const contentId = await createContent();
-    setCreating(false);
-    navigate(`/canvas/${contentId}`);
+    try {
+      const contentId = await createContent();
+      navigate(`/canvas/${contentId}`);
+    } catch {
+      // createContent throws on API failure — stay on dashboard
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (

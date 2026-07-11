@@ -20,13 +20,6 @@ import {
   Quote,
   Text,
   Link,
-  RotateCcw,
-  RotateCw,
-  FlipHorizontal,
-  FlipVertical,
-  Crop,
-  Maximize2,
-  Square,
 } from "lucide-react";
 
 import { ImagePanel } from "./ImagePanel";
@@ -64,10 +57,9 @@ interface ImageAttrs {
   src: string;
   alt: string;
   align: string;
-  width: string;
-  borderRadius: string;
-  border: string;
-  opacity: number;
+  width?: number | string;
+  height?: number | string;
+  "data-align"?: string;
 }
 
 interface CodeAttrs {
@@ -92,12 +84,6 @@ const ALIGN_OPTIONS = [
   { Icon: AlignCenter, align: "center" },
   { Icon: AlignRight, align: "right" },
   { Icon: AlignJustify, align: "justify" },
-] as const;
-
-const IMAGE_ALIGNS = [
-  { Icon: AlignLeft, align: "left" },
-  { Icon: AlignCenter, align: "center" },
-  { Icon: AlignRight, align: "right" },
 ] as const;
 
 const TABLE_ACTIONS = [
@@ -161,48 +147,7 @@ const DEFAULT_IMAGE_ATTRS: ImageAttrs = {
   src: "",
   alt: "",
   align: "left",
-  width: "100%",
-  borderRadius: "0",
-  border: "none",
-  opacity: 100,
 };
-
-// Cloudinary transform helpers
-function applyCloudinaryTransform(src: string, params: string): string {
-  if (!src.includes("cloudinary.com")) return src;
-  return src.replace("/upload/", `/upload/${params}/`);
-}
-
-const CROP_PRESETS = [
-  { label: "Free", params: null },
-  { label: "Square", params: "w_800,h_800,c_fill" },
-  { label: "16:9", params: "w_800,h_450,c_fill" },
-  { label: "4:3", params: "w_800,h_600,c_fill" },
-  { label: "3:2", params: "w_900,h_600,c_fill" },
-] as const;
-
-const BORDER_PRESETS = [
-  { label: "None", value: "none" },
-  { label: "Thin", value: "1px solid currentColor" },
-  { label: "Medium", value: "2px solid currentColor" },
-  { label: "Thick", value: "4px solid currentColor" },
-  { label: "Dashed", value: "2px dashed currentColor" },
-] as const;
-
-const RADIUS_PRESETS = [
-  { label: "None", value: "0" },
-  { label: "SM", value: "4px" },
-  { label: "MD", value: "8px" },
-  { label: "LG", value: "16px" },
-  { label: "Full", value: "999px" },
-] as const;
-
-const WIDTH_PRESETS = [
-  { label: "25%", value: "25%" },
-  { label: "50%", value: "50%" },
-  { label: "75%", value: "75%" },
-  { label: "100%", value: "100%" },
-] as const;
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
@@ -284,61 +229,6 @@ const Row = memo(
     <div className="mb-2 flex items-center justify-between gap-2">
       <span className="text-xs text-muted-foreground">{label}</span>
       <div className="flex items-center gap-1">{children}</div>
-    </div>
-  ),
-);
-
-const IconBtn = memo(
-  ({
-    icon: Icon,
-    onClick,
-    active = false,
-    title,
-  }: {
-    icon: React.ElementType;
-    onClick: () => void;
-    active?: boolean;
-    title?: string;
-  }) => (
-    <button
-      onClick={onClick}
-      title={title}
-      className={`flex h-7 w-7 items-center justify-center rounded transition-colors ${
-        active
-          ? "bg-accent text-foreground"
-          : "text-muted-foreground hover:bg-accent/50"
-      }`}
-    >
-      <Icon size={13} strokeWidth={1.8} />
-    </button>
-  ),
-);
-
-// Pill group — single select from a list of short options
-const PillGroup = memo(
-  ({
-    options,
-    value,
-    onChange,
-  }: {
-    options: readonly { label: string; value: string }[];
-    value: string;
-    onChange: (v: string) => void;
-  }) => (
-    <div className="flex flex-wrap gap-1">
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          onClick={() => onChange(opt.value)}
-          className={`px-2 py-0.5 rounded text-[10px] border transition-colors ${
-            value === opt.value
-              ? "border-primary bg-primary/10 text-primary font-medium"
-              : "border-border text-muted-foreground hover:border-muted-foreground"
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
     </div>
   ),
 );
@@ -968,6 +858,9 @@ const EditorRightSidebar = ({
     DEFAULT_ACTIVE_FORMATS,
   );
   const [imageAttrs, setImageAttrs] = useState<ImageAttrs>(DEFAULT_IMAGE_ATTRS);
+  const [imageSelectionPos, setImageSelectionPos] = useState<number | null>(
+    null,
+  );
   const [codeAttrs, setCodeAttrs] = useState<CodeAttrs>({
     language: "plaintext",
   });
@@ -990,11 +883,11 @@ const EditorRightSidebar = ({
           src: attrs.src ?? "",
           alt: attrs.alt ?? "",
           align: attrs["data-align"] ?? "left",
-          width: attrs.width ?? "100%",
-          borderRadius: attrs.borderRadius ?? "0",
-          border: attrs.border ?? "none",
-          opacity: Math.round((attrs.opacity ?? 1) * 100),
+          width: attrs.width,
+          height: attrs.height,
+          "data-align": attrs["data-align"],
         });
+        setImageSelectionPos(editor.state.selection.from);
         setMode("image");
       } else if (editor.isActive("link")) {
         const attrs = editor.getAttributes("link");
@@ -1081,7 +974,11 @@ const EditorRightSidebar = ({
           </>
         )}
         {mode === "image" && (
-          <ImagePanel editor={editor} imageAttrs={imageAttrs} />
+          <ImagePanel
+            key={imageSelectionPos ?? "image"}
+            editor={editor}
+            imageAttrs={imageAttrs}
+          />
         )}
         {mode === "table" && <TablePanel editor={editor} />}
         {mode === "codeBlock" && (

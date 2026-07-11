@@ -74,6 +74,8 @@ export function ContentCard({
       {/* Bookmark */}
       {onBookmark && (
         <button
+          type="button"
+          aria-label={bookmarked ? "Remove bookmark" : "Add bookmark"}
           onClick={(e) => {
             e.stopPropagation();
             onBookmark();

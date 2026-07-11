@@ -103,7 +103,12 @@ function TiptapView() {
       </div>
     );
 
-  if (contentLoadError)
+  if (contentLoadError) {
+    const needsLogin =
+      !token &&
+      typeof contentLoadError === "string" &&
+      /login required/i.test(contentLoadError);
+
     return (
       <div className="flex min-h-screen flex-col bg-background text-foreground">
         <TopNav />
@@ -111,9 +116,11 @@ function TiptapView() {
           <p className="max-w-md text-sm text-muted-foreground">
             {contentLoadError}
           </p>
-          <Button asChild variant="outline" size="sm">
-            <Link to="/login">Log in</Link>
-          </Button>
+          {needsLogin && (
+            <Button asChild variant="outline" size="sm">
+              <Link to="/login">Log in</Link>
+            </Button>
+          )}
           <Link
             to="/explore"
             className="text-xs text-primary underline-offset-4 hover:underline"
@@ -123,6 +130,7 @@ function TiptapView() {
         </div>
       </div>
     );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">

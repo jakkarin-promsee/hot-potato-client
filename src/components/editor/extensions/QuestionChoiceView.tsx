@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { NodeViewWrapper, NodeViewProps } from "@tiptap/react";
 import { NodeSelection } from "@tiptap/pm/state";
 import { useAnswerStore } from "@/stores/content-answer.store";
@@ -18,7 +18,8 @@ import {
 import AiErrorRetry from "./AiErrorRetry";
 import MarkdownMessage from "./MarkdownMessage";
 import SuggestionChips from "./SuggestionChips";
-import { evaluateChoiceAnswer } from "./questionEvaluation";
+import { evaluateChoiceAnswer, type Choice } from "./questionEvaluation";
+import { useAutoGrow } from "./useAutoGrow";
 
 import { callCreator } from "@/lib/creatorApi";
 
@@ -39,38 +40,14 @@ import { useEditorI18n } from "../editor.i18n";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface Choice {
-  text: string;
-  correct: boolean;
-}
+export type { Choice };
 
 export interface QuestionChoiceAttrs {
+  id: string;
   question: string;
   choices: Choice[];
   answerType: "single" | "multi";
   feedbackMode: QuestionFeedbackMode;
-}
-
-// ─── Auto-grow hook ───────────────────────────────────────────────────────────
-
-function useAutoGrow(value: string) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-
-  const resize = useCallback(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, []);
-
-  useEffect(resize, [value, resize]);
-
-  useEffect(() => {
-    const raf = requestAnimationFrame(resize);
-    return () => cancelAnimationFrame(raf);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  return ref;
 }
 
 // ─── Choice Input (Creator) ───────────────────────────────────────────────────
@@ -440,7 +417,7 @@ interface BlockAnswer {
 function ViewerView({ attrs }: ViewerViewProps) {
   const { t } = useEditorI18n();
   const { question, choices, answerType, feedbackMode } = attrs;
-  const blockId = (attrs as any).id as string;
+  const blockId = attrs.id;
 
   // ── Store ──────────────────────────────────────────────────────
   const answers = useAnswerStore((s) => s.answers);
@@ -943,19 +920,7 @@ export default function QuestionChoiceView({
   // switching the editor to read-only. Only available in editable mode.
   const [previewMode, setPreviewMode] = useState(false);
 
-  const handleFlush = useCallback(
-    (
-      question: string,
-      choices: Choice[],
-      answerType: "single" | "multi",
-      feedbackMode: QuestionFeedbackMode,
-    ) => {
-      updateAttributes({ question, choices, answerType, feedbackMode });
-    },
-    [updateAttributes],
-  );
-
-  const handleCommit = useCallback(
+  const handleUpdate = useCallback(
     (
       question: string,
       choices: Choice[],
@@ -1043,8 +1008,8 @@ export default function QuestionChoiceView({
             initialChoices={attrs.choices}
             initialAnswerType={attrs.answerType}
             initialFeedbackMode={attrs.feedbackMode}
-            onFlush={handleFlush}
-            onCommit={handleCommit}
+            onFlush={handleUpdate}
+            onCommit={handleUpdate}
           />
         ) : (
           <ViewerView attrs={attrs} />

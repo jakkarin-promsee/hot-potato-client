@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import {
   FabricImage,
-  filters,
   IText,
   Rect,
   Group as FabricGroup,
@@ -837,109 +836,6 @@ const MixedPanel = memo(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ImagePanel
-// ─────────────────────────────────────────────────────────────────────────────
-
-const ImagePanel = memo(
-  ({
-    obj,
-    canvas,
-    saveStateRef,
-    forceUpdate,
-    tick, // 👈 added to break memo bailout
-  }: {
-    obj: FabricImage;
-    canvas: any;
-    saveStateRef: React.RefObject<(() => void) | null>;
-    forceUpdate: () => void;
-    tick: number;
-  }) => (
-    <Section title="Image">
-      <div className="mb-3 flex flex-col gap-1.5">
-        <button
-          onClick={() => {
-            if (!canvas) return;
-            const el = obj.getElement() as HTMLImageElement;
-            obj.set({
-              cropX: el.naturalWidth * 0.1,
-              cropY: el.naturalHeight * 0.1,
-              width: el.naturalWidth * 0.8,
-              height: el.naturalHeight * 0.8,
-            });
-            canvas.renderAll();
-            saveStateRef.current?.();
-            forceUpdate();
-          }}
-          className="w-full rounded-md border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-accent/50 transition-colors"
-        >
-          Crop Center 80%
-        </button>
-        <button
-          onClick={() => {
-            if (!canvas) return;
-            const el = obj.getElement() as HTMLImageElement;
-            obj.set({
-              cropX: 0,
-              cropY: 0,
-              width: el.naturalWidth,
-              height: el.naturalHeight,
-            });
-            canvas.renderAll();
-            saveStateRef.current?.();
-            forceUpdate();
-          }}
-          className="w-full rounded-md border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-accent/50 transition-colors"
-        >
-          Reset Crop
-        </button>
-      </div>
-      <span className="mb-1.5 block text-xs text-muted-foreground">
-        Filters
-      </span>
-      <div className="flex flex-col gap-1.5">
-        {[
-          {
-            label: "Grayscale",
-            apply: () => {
-              obj.filters = [new filters.Grayscale()];
-              obj.applyFilters();
-              canvas?.renderAll();
-            },
-          },
-          {
-            label: "Sepia",
-            apply: () => {
-              obj.filters = [new filters.Sepia()];
-              obj.applyFilters();
-              canvas?.renderAll();
-            },
-          },
-          {
-            label: "None",
-            apply: () => {
-              obj.filters = [];
-              obj.applyFilters();
-              canvas?.renderAll();
-            },
-          },
-        ].map(({ label, apply }) => (
-          <button
-            key={label}
-            onClick={() => {
-              apply();
-              saveStateRef.current?.();
-            }}
-            className="w-full rounded-md border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-accent/50 transition-colors"
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-    </Section>
-  ),
-);
-
-// ─────────────────────────────────────────────────────────────────────────────
 // RichLinePanel
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1185,18 +1081,6 @@ export default function CanvasRightSidebar() {
     groupSelected: groupSelection,
     ungroupSelected: ungroupSelection,
   } = useFabric();
-
-  // useEffect(() => {
-  //   if (!canvas) return;
-  //   canvas.on("object:modified", forceUpdate);
-  //   canvas.on("selection:created", forceUpdate);
-  //   canvas.on("selection:updated", forceUpdate);
-  //   return () => {
-  //     canvas.off("object:modified", forceUpdate);
-  //     canvas.off("selection:created", forceUpdate);
-  //     canvas.off("selection:updated", forceUpdate);
-  //   };
-  // }, [canvas, forceUpdate]);
 
   useEffect(() => {
     const onUp = () => {

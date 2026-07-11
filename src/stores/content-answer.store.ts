@@ -20,8 +20,12 @@ export const useAnswerStore = create<AnswerState>((set, get) => ({
 
   loadAnswers: async (contentId: string) => {
     set({ isLoading: true });
-    const res = await api.get(`/content-answer/${contentId}`);
-    set({ contentId, answers: res.data, isDirty: false, isLoading: false });
+    try {
+      const res = await api.get(`/content-answer/${contentId}`);
+      set({ contentId, answers: res.data, isDirty: false, isLoading: false });
+    } catch {
+      set({ isLoading: false });
+    }
   },
 
   // Instant local update only — no API call

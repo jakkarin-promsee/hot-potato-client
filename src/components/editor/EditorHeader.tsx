@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, memo } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { Editor } from "@tiptap/react";
 import { Link } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -70,18 +70,12 @@ const EditorHeader = memo(
     onDynamicUpdateChange,
   }: EditorHeaderProps) => {
     const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
-    const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">(
-      "idle",
-    );
     const [canUndo, setCanUndo] = useState(false);
     const [canRedo, setCanRedo] = useState(false);
     const [zoomInputFocused, setZoomInputFocused] = useState(false);
     const [zoomInputValue, setZoomInputValue] = useState(
       String(Math.round(zoom * 100)),
     );
-    const inputRef = useRef<HTMLInputElement>(null);
-    const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
     const title = useCanvasStore((s) => s.title);
     const isSaving = useCanvasStore((s) => s.isSaving);
     const isDirty = useCanvasStore((s) => s.isDirty);
@@ -89,7 +83,6 @@ const EditorHeader = memo(
     const saveContent = useCanvasStore((s) => s.saveContent);
     const { isThai } = useEditorI18n();
 
-    // Replace triggerSave with real save
     const handleTitleChange = useCallback(
       (e: React.ChangeEvent<HTMLInputElement>) => {
         setTitle(e.target.value); // ✅ goes to store now
@@ -106,15 +99,6 @@ const EditorHeader = memo(
       if (!zoomInputFocused) setZoomInputValue(String(Math.round(zoom * 100)));
     }, [zoom, zoomInputFocused]);
 
-    const triggerSave = useCallback(() => {
-      setSaveState("saving");
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(() => {
-        setSaveState("saved");
-        setTimeout(() => setSaveState("idle"), 2000);
-      }, 1200);
-    }, []);
-
     // Undo/redo — always live (only 2 cheap checks, not worth gating)
     useEffect(() => {
       if (!editor) return;
@@ -128,13 +112,6 @@ const EditorHeader = memo(
         editor.off("transaction", update);
       };
     }, [editor]);
-
-    useEffect(
-      () => () => {
-        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      },
-      [],
-    );
 
     const handleUndo = useCallback(
       () => editor?.chain().focus().undo().run(),
@@ -228,7 +205,6 @@ const EditorHeader = memo(
             </Link>
             <div className="mx-1 h-4 w-px bg-border" />
             <input
-              ref={inputRef}
               type="text"
               value={title}
               onChange={handleTitleChange}

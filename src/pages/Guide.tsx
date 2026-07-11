@@ -2,7 +2,6 @@ import {
   BookOpen,
   PenSquare,
   Eye,
-  Layers,
   Share2,
   Sparkles,
   Brain,

@@ -8,8 +8,7 @@ import { MonitorSmartphone } from "lucide-react";
 
 const TipTapCanvas = () => {
   const { id } = useParams<{ id: string }>();
-  const { loadContent, saveContent, isLoading, isDirty, conflict } =
-    useCanvasStore();
+  const { loadContent, isLoading } = useCanvasStore();
   const recordVisit = useLearningHistoryStore((s) => s.recordVisit);
 
   useEffect(() => {
@@ -19,17 +18,20 @@ const TipTapCanvas = () => {
     }
   }, [id, loadContent, recordVisit]);
 
-  // Auto save
+  // Auto save — read fresh store state each tick to avoid stale isDirty
   useEffect(() => {
     const interval = setInterval(() => {
-      if (isDirty) saveContent();
+      const { isDirty, saveContent: save } = useCanvasStore.getState();
+      if (isDirty) void save();
     }, 30000);
     return () => clearInterval(interval);
-  }, [isDirty]);
+  }, []);
 
   // Save on page leave
   useEffect(() => {
-    const handleLeave = () => saveContent();
+    const handleLeave = () => {
+      void useCanvasStore.getState().saveContent();
+    };
     window.addEventListener("beforeunload", handleLeave);
     return () => window.removeEventListener("beforeunload", handleLeave);
   }, []);
@@ -52,18 +54,17 @@ const TipTapCanvas = () => {
       hiddenAt = null;
 
       // Only re-sync if away for more than 1 minute
-      if (awayMs > STALE_THRESHOLD) {
-        await saveContent();
-        // Read fresh state directly from store after save
-        const { conflict } = useCanvasStore.getState();
-        if (!conflict) loadContent(id!);
+      if (awayMs > STALE_THRESHOLD && id) {
+        await useCanvasStore.getState().saveContent();
+        const { conflict: hasConflict } = useCanvasStore.getState();
+        if (!hasConflict) loadContent(id);
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () =>
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [id]);
+  }, [id, loadContent]);
 
   const desktopShell = (
     <div className="flex min-h-screen flex-col bg-background text-foreground">

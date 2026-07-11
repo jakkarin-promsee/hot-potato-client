@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { NodeViewWrapper, NodeViewProps } from "@tiptap/react";
 import { NodeSelection } from "@tiptap/pm/state";
 import { useAnswerStore } from "@/stores/content-answer.store";
@@ -20,6 +20,7 @@ import type { QuestionFeedbackMode } from "./questionMode";
 import { Eye, EyeOff, HelpCircle, SquareDashedMousePointer } from "lucide-react";
 import type { QuestionBlankWriteAttrs } from "./QuestionBlankWriteNode";
 import BlockMoveControls from "./BlockMoveControls";
+import { useAutoGrow } from "./useAutoGrow";
 import { useEditorI18n } from "../editor.i18n";
 
 interface BlockAnswer {
@@ -36,25 +37,6 @@ interface InlineBlankTextareaProps {
   disabled: boolean;
   placeholder: string;
   onChange: (value: string) => void;
-}
-
-function useAutoGrow(value: string) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-
-  const resize = useCallback(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, []);
-
-  useEffect(resize, [value, resize]);
-  useEffect(() => {
-    const raf = requestAnimationFrame(resize);
-    return () => cancelAnimationFrame(raf);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  return ref;
 }
 
 function InlineBlankTextarea({

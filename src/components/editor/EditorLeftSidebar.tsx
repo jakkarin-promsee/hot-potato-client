@@ -338,9 +338,9 @@ const MediaPanel = memo(({ editor }: { editor: Editor }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetchHistory();
-    fetchCategories();
-  }, []);
+    void fetchHistory();
+    void fetchCategories();
+  }, [fetchHistory, fetchCategories]);
 
   // activeCatId === null means "All" → upload with no category (null)
   // a real id means upload into that category

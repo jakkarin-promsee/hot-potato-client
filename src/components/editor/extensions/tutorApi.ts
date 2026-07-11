@@ -68,6 +68,14 @@ function attachPersonality<T extends TutorRequest>(req: T): T & { personality: s
   };
 }
 
+function normalizeSuggestions(raw: unknown): string[] {
+  return Array.isArray(raw)
+    ? raw.filter(
+        (s): s is string => typeof s === "string" && s.trim().length > 0,
+      )
+    : [];
+}
+
 function parseSseBuffer(buffer: string): {
   events: { event: string; data: unknown }[];
   rest: string;
@@ -152,11 +160,7 @@ export async function callTutorStream(
             typeof data === "object" &&
             data !== null &&
             (data as { suggestions?: unknown }).suggestions;
-          suggestions = Array.isArray(raw)
-            ? raw.filter(
-                (s): s is string => typeof s === "string" && s.trim().length > 0,
-              )
-            : [];
+          suggestions = normalizeSuggestions(raw);
         } else if (event === "done") {
           gotDone = true;
           if (
@@ -198,11 +202,7 @@ export async function callTutor(req: TutorRequest): Promise<TutorResponse> {
     if (!reply) throw new AiUnavailableError();
     return {
       reply,
-      suggestions: Array.isArray(response.data?.suggestions)
-        ? response.data.suggestions.filter(
-            (s): s is string => typeof s === "string" && s.trim().length > 0,
-          )
-        : [],
+      suggestions: normalizeSuggestions(response.data?.suggestions),
       sessionId:
         typeof response.data?.sessionId === "string"
           ? response.data.sessionId

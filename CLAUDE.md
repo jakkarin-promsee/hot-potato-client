@@ -59,7 +59,6 @@ client/src/
 ├── components/
 │   ├── ui/             # shadcn/ui primitives
 │   ├── editor/         # the lesson editor (TipTap + Fabric + question blocks)
-│   ├── design/         # canvas design panels (sidebars, properties, assets)
 │   └── *.tsx           # TopNav, ContentCard, route guards, ThemeToggle, etc.
 ├── stores/             # Zustand global state
 ├── hooks/              # useFabric, useFabricSetup, useCanvasDrag

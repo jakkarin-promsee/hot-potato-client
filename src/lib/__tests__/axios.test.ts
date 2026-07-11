@@ -21,6 +21,7 @@ describe("isProtectedPath", () => {
     expect(isProtectedPath("/explore")).toBe(false);
     expect(isProtectedPath("/view/lesson-id")).toBe(false);
     expect(isProtectedPath("/login")).toBe(false);
+    expect(isProtectedPath("/settings")).toBe(false);
   });
 });
 

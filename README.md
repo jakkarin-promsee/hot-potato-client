@@ -66,8 +66,7 @@ client/src/
 ├── layouts/         # shared layout chrome
 ├── components/
 │   ├── ui/          # shadcn/ui primitives
-│   ├── editor/      # the TipTap lesson editor + question/canvas/formula blocks
-│   └── design/      # canvas design panels
+│   └── editor/      # the TipTap lesson editor + question/canvas/formula blocks
 ├── stores/          # Zustand state (auth, content, answers, ...)
 ├── hooks/           # Fabric canvas hooks
 ├── contexts/        # CanvasContext

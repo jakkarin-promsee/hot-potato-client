@@ -34,14 +34,24 @@ export const useAuthStore = create<AuthState>()(
       // ── Functions ───────────────────────────
       login: async (email, password) => {
         set({ isLoading: true, error: null });
-        const res = await api.post("/auth/login", { email, password });
-        set({ user: res.data.user, token: res.data.token, isLoading: false });
+        try {
+          const res = await api.post("/auth/login", { email, password });
+          set({ user: res.data.user, token: res.data.token, isLoading: false });
+        } catch (err) {
+          set({ isLoading: false });
+          throw err;
+        }
       },
 
       register: async (name, email, password) => {
         set({ isLoading: true, error: null });
-        const res = await api.post("/auth/register", { name, email, password });
-        set({ user: res.data.user, token: res.data.token, isLoading: false });
+        try {
+          const res = await api.post("/auth/register", { name, email, password });
+          set({ user: res.data.user, token: res.data.token, isLoading: false });
+        } catch (err) {
+          set({ isLoading: false });
+          throw err;
+        }
       },
 
       recheckToken: async () => {
@@ -52,7 +62,7 @@ export const useAuthStore = create<AuthState>()(
           const res = await api.get("/auth/recheck", {
             // Let store decide redirect behavior after token clear.
             skipAuthRedirect: true,
-          } as any);
+          });
           set({ user: res.data.user, token: res.data.token ?? token, error: null });
         } catch {
           set({ user: null, token: null });

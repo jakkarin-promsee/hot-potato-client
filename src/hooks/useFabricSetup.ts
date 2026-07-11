@@ -18,7 +18,7 @@ function useFabricSetup({
   width,
   height,
   canvasData,
-  backgroundColor = "FaFaFa",
+  backgroundColor = "#fafafa",
 }: useFabricSetupOptions) {
   const canvasRef = useRef<Canvas>(null);
   const canvasElRef = useRef<HTMLCanvasElement>(null);
@@ -122,7 +122,6 @@ function useFabricSetup({
     });
     canvasRef.current?.on("selection:updated", (e) => {
       setSelectedObjects(e.selected || []);
-      console.log("modifield");
     });
     canvasRef.current?.on("selection:cleared", () => {
       setSelectedObjects([]);
@@ -135,17 +134,16 @@ function useFabricSetup({
         e.target instanceof HTMLTextAreaElement
       )
         return;
-      if (e.key === "Delete" || e.key === "Backspace" || e.key === "a") {
+      if (e.key === "Delete" || e.key === "Backspace") {
         const active = c.getActiveObjects();
         if (active.length) {
-          console.log("test");
           e.preventDefault();
           e.stopImmediatePropagation();
 
-          saveStateRef.current?.();
           active.forEach((obj) => c.remove(obj));
           c.discardActiveObject();
           c.requestRenderAll();
+          saveStateRef.current?.();
         }
       }
     };
@@ -159,7 +157,7 @@ function useFabricSetup({
     canvasRef.current?.renderAll();
 
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keydown", handleKeyDown, true);
       c.dispose();
       setCanvasSync(null);
     };

@@ -124,10 +124,11 @@ export default function FormulaCanvas({
     if (!attrs.id) updateAttributes({ id: blockId });
   }, [attrs.id, blockId, updateAttributes]);
 
+  // Sync only when the stored latex attr changes (undo/redo, AI accept). Do not
+  // depend on latexInput — a stale attrs snapshot would reset mid-keystroke typing.
   useEffect(() => {
-    const externalLatex = inferInitialLatex(attrs);
-    if (externalLatex !== latexInput) setLatexInput(externalLatex);
-  }, [attrs, latexInput]);
+    setLatexInput(inferInitialLatex(attrs));
+  }, [attrs.latex]);
 
   const persistLatex = useCallback(
     (nextLatex: string) => {
@@ -216,16 +217,17 @@ export default function FormulaCanvas({
     });
   }, [activeToolbarBlockId, applyToolbarAction, blockId, isEditable]);
 
-  const renderResult = useMemo(() => {
-    if (!latexInput.trim()) return "";
+  const { renderHtml, latexRenderOk } = useMemo(() => {
+    if (!latexInput.trim()) return { renderHtml: "", latexRenderOk: true };
     try {
-      return katex.renderToString(latexInput, {
+      const html = katex.renderToString(latexInput, {
         throwOnError: false,
         displayMode: true,
         strict: "ignore",
       });
+      return { renderHtml: html, latexRenderOk: !html.includes("katex-error") };
     } catch {
-      return "";
+      return { renderHtml: "", latexRenderOk: false };
     }
   }, [latexInput]);
 
@@ -350,10 +352,10 @@ export default function FormulaCanvas({
                 fontFamily: "'STIX Two Math', 'Latin Modern Math', serif",
               }}
             >
-              {renderResult ? (
+              {renderHtml ? (
                 <div
                   className="overflow-x-auto"
-                  dangerouslySetInnerHTML={{ __html: renderResult }}
+                  dangerouslySetInnerHTML={{ __html: renderHtml }}
                 />
               ) : (
                 <p className="text-xs text-slate-400">
@@ -370,7 +372,7 @@ export default function FormulaCanvas({
             >
               <AiFormulaPanel
                 onLatex={persistLatex}
-                renderFailed={Boolean(latexInput.trim()) && !renderResult}
+                renderFailed={Boolean(latexInput.trim()) && !latexRenderOk}
               />
               <div className="grid grid-cols-8 gap-1">
                 {quickTemplates.map((item) => (
@@ -402,10 +404,10 @@ export default function FormulaCanvas({
               />
 
               <div className="min-h-14 rounded border border-slate-300 bg-white px-3 py-2">
-                {renderResult ? (
+                {renderHtml ? (
                   <div
                     className="overflow-x-auto"
-                    dangerouslySetInnerHTML={{ __html: renderResult }}
+                    dangerouslySetInnerHTML={{ __html: renderHtml }}
                   />
                 ) : (
                   <p className="text-xs text-slate-400">
@@ -432,10 +434,10 @@ export default function FormulaCanvas({
           className="text-slate-900"
           style={{ fontFamily: "'STIX Two Math', 'Latin Modern Math', serif" }}
         >
-          {renderResult ? (
+          {renderHtml ? (
             <div
               className="overflow-x-auto"
-              dangerouslySetInnerHTML={{ __html: renderResult }}
+              dangerouslySetInnerHTML={{ __html: renderHtml }}
             />
           ) : null}
         </div>

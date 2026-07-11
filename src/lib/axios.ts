@@ -14,7 +14,6 @@ const PROTECTED_PATH_PREFIXES = [
   "/create",
   "/profile",
   "/change-password",
-  "/settings",
 ];
 
 export function isProtectedPath(pathname: string): boolean {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { NodeViewWrapper, NodeViewProps } from "@tiptap/react";
 import { NodeSelection } from "@tiptap/pm/state";
 import { useAnswerStore } from "@/stores/content-answer.store";
@@ -17,9 +17,10 @@ import AiErrorRetry from "./AiErrorRetry";
 import MarkdownMessage from "./MarkdownMessage";
 import SuggestionChips from "./SuggestionChips";
 import type { QuestionFeedbackMode } from "./questionMode";
-import { Check, Eye, EyeOff, HelpCircle, SquareDashedMousePointer, X } from "lucide-react";
+import { Eye, EyeOff, HelpCircle, SquareDashedMousePointer, X } from "lucide-react";
 import type { QuestionBlankChoiceAttrs } from "./QuestionBlankChoiceNode";
 import BlockMoveControls from "./BlockMoveControls";
+import { useAutoGrow } from "./useAutoGrow";
 import { useEditorI18n } from "../editor.i18n";
 
 interface BlockAnswer {
@@ -32,25 +33,6 @@ interface BlockAnswer {
 }
 
 const BLANK_TOKEN_REGEX = /\[Q-(\d+)\]|\{\{(\d+)\}\}/g;
-
-function useAutoGrow(value: string) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-
-  const resize = useCallback(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, []);
-
-  useEffect(resize, [value, resize]);
-  useEffect(() => {
-    const raf = requestAnimationFrame(resize);
-    return () => cancelAnimationFrame(raf);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  return ref;
-}
 
 const getBlankIndices = (template: string): number[] => {
   const unique = new Set<number>();

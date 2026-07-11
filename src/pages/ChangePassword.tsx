@@ -8,13 +8,11 @@ const ChangePassword = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
-    setSuccess("");
 
     if (!currentPassword || !newPassword || !confirmPassword) {
       setError("Please fill in all fields.");
@@ -33,12 +31,11 @@ const ChangePassword = () => {
 
     setIsLoading(true);
     try {
-      const res = await api.put("/auth/change-password", {
+      await api.put("/auth/change-password", {
         currentPassword,
         newPassword,
       });
 
-      setSuccess(res.data?.message || "Password changed successfully.");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -122,7 +119,6 @@ const ChangePassword = () => {
             </div>
 
             {error && <p className="text-sm text-red-500">{error}</p>}
-            {success && <p className="text-sm text-emerald-600">{success}</p>}
 
             <button
               type="submit"

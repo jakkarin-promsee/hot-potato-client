@@ -44,21 +44,21 @@ export default function Explore() {
   const token = useAuthStore((s) => s.token);
 
   useEffect(() => {
-    fetchExploreContents();
-  }, [fetchExploreContents]);
-
-  useEffect(() => {
     if (token) fetchHistory(6);
   }, [token, fetchHistory]);
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (search.trim()) {
-        searchExploreContents(search);
-      } else {
-        fetchExploreContents();
-      }
-    }, 400);
+    const q = search.trim();
+    const timeout = setTimeout(
+      () => {
+        if (q) {
+          searchExploreContents(q);
+        } else {
+          fetchExploreContents();
+        }
+      },
+      q ? 400 : 0,
+    );
 
     return () => clearTimeout(timeout);
   }, [search, searchExploreContents, fetchExploreContents]);

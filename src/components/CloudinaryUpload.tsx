@@ -1,31 +1,43 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useUploadStore } from "@/stores/cloudinary.store";
 import { useCategoryStore } from "@/stores/category.store";
-import {
-  isConfigured,
-  QUICK_TRANSFORMS,
-  applyTransform,
-} from "@/lib/cloudinary";
+import { QUICK_TRANSFORMS, applyTransform } from "@/lib/cloudinary";
 import { formatBytes, formatDate, formatDimensions } from "@/lib/format";
 import type { UploadedImage } from "@/types/cloudinary.types";
+
+const BADGE_STYLES = {
+  zinc: "bg-zinc-800/60 text-zinc-300 border-zinc-700/50",
+  violet: "bg-violet-800/60 text-violet-300 border-violet-700/50",
+} as const;
 
 function Badge({
   children,
   color = "zinc",
 }: {
   children: React.ReactNode;
-  color?: string;
+  color?: keyof typeof BADGE_STYLES;
 }) {
   return (
     <span
-      className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide bg-${color}-800/60 text-${color}-300 border border-${color}-700/50`}
+      className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide border ${BADGE_STYLES[color]}`}
     >
       {children}
     </span>
   );
 }
 
-export default function CloudinaryUpload() {
+function resolveUploadCategoryId(
+  activeCategoryId: string | null,
+): string | null {
+  return activeCategoryId === "__none__" ? null : activeCategoryId;
+}
+
+interface CloudinaryUploadProps {
+  /** Full-page route shows the Image Vault header; editor sidebar omits it. */
+  showHeader?: boolean;
+}
+
+export default function CloudinaryUpload({ showHeader = false }: CloudinaryUploadProps) {
   const {
     isUploading,
     progress,
@@ -73,7 +85,7 @@ export default function CloudinaryUpload() {
 
   const handleFile = useCallback(
     (file: File | undefined) => {
-      if (file) upload(file, activeCategoryId);
+      if (file) upload(file, resolveUploadCategoryId(activeCategoryId));
     },
     [upload, activeCategoryId],
   );
@@ -111,8 +123,7 @@ export default function CloudinaryUpload() {
 
   const handleUrlSubmit = () => {
     if (!urlInput.trim() || isUploading) return;
-    const catId = activeCategoryId === "__none__" ? null : activeCategoryId;
-    uploadFromUrl(urlInput.trim(), catId);
+    uploadFromUrl(urlInput.trim(), resolveUploadCategoryId(activeCategoryId));
     setUrlInput("");
     setShowUrlInput(false);
   };
@@ -122,25 +133,26 @@ export default function CloudinaryUpload() {
       className="min-h-screen bg-[#0e0e10] text-zinc-100"
       style={{ fontFamily: "'DM Mono', 'Fira Code', monospace" }}
     >
-      {/* Top bar */}
-      {/* <header className="h-12 border-b border-white/[0.06] flex items-center px-5 gap-4 sticky top-0 z-30 bg-[#0e0e10]/90 backdrop-blur-sm">
-        <div className="w-5 h-5 rounded bg-violet-500 flex items-center justify-center shrink-0">
-          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-            <path
-              d="M6 1C3.24 1 1 3.24 1 6s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0 2.5c.83 0 1.5.67 1.5 1.5S6.83 6.5 6 6.5 4.5 5.83 4.5 5 5.17 3.5 6 3.5zM6 9.9C4.83 9.9 3.8 9.32 3.16 8.44A3.5 3.5 0 0 1 6 7.5c1.07 0 2.02.48 2.84 1.44A3.98 3.98 0 0 1 6 9.9z"
-              fill="white"
-            />
-          </svg>
-        </div>
-        <span className="text-[11px] font-semibold tracking-[0.18em] text-zinc-400 uppercase">
-          Image Vault
-        </span>
-        <div className="ml-auto flex items-center gap-3 text-[11px] text-zinc-600">
-          <span>{history.length} files</span>
-          <span>·</span>
-          <span>{categories.length} groups</span>
-        </div>
-      </header> */}
+      {showHeader && (
+        <header className="h-12 border-b border-white/6 flex items-center px-5 gap-4 sticky top-0 z-30 bg-[#0e0e10]/90 backdrop-blur-sm">
+          <div className="w-5 h-5 rounded bg-violet-500 flex items-center justify-center shrink-0">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+              <path
+                d="M6 1C3.24 1 1 3.24 1 6s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0 2.5c.83 0 1.5.67 1.5 1.5S6.83 6.5 6 6.5 4.5 5.83 4.5 5 5.17 3.5 6 3.5zM6 9.9C4.83 9.9 3.8 9.32 3.16 8.44A3.5 3.5 0 0 1 6 7.5c1.07 0 2.02.48 2.84 1.44A3.98 3.98 0 0 1 6 9.9z"
+                fill="white"
+              />
+            </svg>
+          </div>
+          <span className="text-[11px] font-semibold tracking-[0.18em] text-zinc-400 uppercase">
+            Image Vault
+          </span>
+          <div className="ml-auto flex items-center gap-3 text-[11px] text-zinc-600">
+            <span>{history.length} files</span>
+            <span>·</span>
+            <span>{categories.length} groups</span>
+          </div>
+        </header>
+      )}
 
       <div className="flex h-[calc(100vh-48px)]">
         {/* Sidebar */}

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Compass,
   PenSquare,
@@ -9,7 +8,7 @@ import {
   Settings,
 } from "lucide-react";
 import { NavLink } from "./NavLink";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +16,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { useAuthStore } from "@/stores/auth.store";

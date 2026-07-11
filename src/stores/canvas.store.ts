@@ -202,23 +202,28 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     if (!contentId) return;
 
     set({ isSaving: true });
-    const res = await api.put(`/content/${contentId}`, {
-      title,
-      title_image: titleImage,
-      tiptap_json: tiptapJson,
-      collaborators,
-      access_type: accessType,
-      topics,
-      description,
-      agent_settings: agentSettings,
-      // 👆 no clientUpdatedAt — skips version check
-    });
-    set({
-      isSaving: false,
-      isDirty: false,
-      conflict: false,
-      updatedAt: res.data.updatedAt,
-    });
+    try {
+      const res = await api.put(`/content/${contentId}`, {
+        title,
+        title_image: titleImage,
+        tiptap_json: tiptapJson,
+        collaborators,
+        access_type: accessType,
+        topics,
+        description,
+        agent_settings: agentSettings,
+        // 👆 no clientUpdatedAt — skips version check
+      });
+      set({
+        isSaving: false,
+        isDirty: false,
+        conflict: false,
+        updatedAt: res.data.updatedAt,
+      });
+    } catch (err) {
+      set({ isSaving: false });
+      throw err;
+    }
   },
 
   setTitle: (title) => set({ title, isDirty: true }),

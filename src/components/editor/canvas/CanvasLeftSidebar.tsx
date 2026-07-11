@@ -915,7 +915,8 @@ const DrawPanel = memo(
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function CanvasLeftSidebar() {
-  const { selectedCategory, setSelectedCategory, canvas } = useCanvasContext();
+  const { selectedCategory, setSelectedCategory, canvas, saveStateRef } =
+    useCanvasContext();
   const [search, setSearch] = useState("");
   const [isDrawing, setIsDrawing] = useState(false);
   const [brushSize, setBrushSizeLocal] = useState(4);
@@ -956,6 +957,7 @@ export default function CanvasLeftSidebar() {
       canvas.add(obj);
     });
     canvas.renderAll();
+    saveStateRef.current?.();
   };
 
   // ── Connector ───────────────────────────────────────────────────────────────

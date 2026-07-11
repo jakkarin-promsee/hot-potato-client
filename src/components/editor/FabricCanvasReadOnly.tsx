@@ -16,47 +16,65 @@ const FabricCanvasReadOnly = ({
   useEffect(() => {
     if (!canvasElRef.current) return;
 
-    let canvas: Canvas | null = null;
+    let cancelled = false;
 
-    const init = setTimeout(async () => {
-      canvas = new Canvas(canvasElRef.current!, {
-        width,
-        height,
-        backgroundColor: "#fafafa",
-        selection: false, // disable group selection
-        interactive: false, // disable all interaction at canvas level
-        renderOnAddRemove: false,
-      });
-
-      canvasRef.current = canvas;
-
-      if (canvasData) {
-        // v6 API: loadFromJSON returns a Promise
-        await canvas.loadFromJSON(JSON.parse(canvasData));
-
-        canvas.getObjects().forEach((obj) => {
-          obj.set({
-            selectable: false,
-            evented: false,
-            lockMovementX: true, // ← belt-and-suspenders locks
-            lockMovementY: true,
-            lockRotation: true,
-            lockScalingX: true,
-            lockScalingY: true,
-            hasControls: false,
-            hasBorders: false,
-            hoverCursor: "default",
-          });
+    const init = setTimeout(() => {
+      void (async () => {
+        const canvas = new Canvas(canvasElRef.current!, {
+          width,
+          height,
+          backgroundColor: "#fafafa",
+          selection: false, // disable group selection
+          interactive: false, // disable all interaction at canvas level
+          renderOnAddRemove: false,
         });
 
-        // Disable all mouse events on the canvas element itself
-        canvas.off(); // remove all fabric event listeners
+        if (cancelled) {
+          canvas.dispose();
+          return;
+        }
 
-        canvas.requestRenderAll();
-      }
+        canvasRef.current = canvas;
+
+        if (canvasData) {
+          try {
+            // v6 API: loadFromJSON returns a Promise
+            await canvas.loadFromJSON(JSON.parse(canvasData));
+          } catch {
+            // Bad or empty JSON — keep the blank read-only canvas
+          }
+
+          if (cancelled) {
+            canvas.dispose();
+            canvasRef.current = null;
+            return;
+          }
+
+          canvas.getObjects().forEach((obj) => {
+            obj.set({
+              selectable: false,
+              evented: false,
+              lockMovementX: true, // ← belt-and-suspenders locks
+              lockMovementY: true,
+              lockRotation: true,
+              lockScalingX: true,
+              lockScalingY: true,
+              hasControls: false,
+              hasBorders: false,
+              hoverCursor: "default",
+            });
+          });
+
+          // Disable all mouse events on the canvas element itself
+          canvas.off(); // remove all fabric event listeners
+
+          canvas.requestRenderAll();
+        }
+      })();
     }, 0);
 
     return () => {
+      cancelled = true;
       clearTimeout(init);
       canvasRef.current?.dispose();
       canvasRef.current = null;

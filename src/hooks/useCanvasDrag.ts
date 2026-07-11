@@ -1,14 +1,20 @@
 import { useEffect, useRef } from "react";
 import { Canvas, FabricObject } from "fabric";
 
+type DragHandlers = {
+  onDown: (e: { target?: FabricObject }) => void;
+  onUp: () => void;
+};
+
 export function useCanvasDrag(
   canvases: Map<string, Canvas>,
   canvasesSaveState: Map<string, () => void>,
 ) {
   const canvasesRef = useRef(canvases);
   const saveStateRef = useRef(canvasesSaveState);
+  const wiredHandlersRef = useRef(new WeakMap<Canvas, DragHandlers>());
+  const wiredCanvasesRef = useRef(new Set<Canvas>());
 
-  // Keep refs in sync with latest props
   useEffect(() => {
     canvasesRef.current = canvases;
   }, [canvases]);
@@ -33,6 +39,36 @@ export function useCanvasDrag(
       return entry?.[0];
     };
 
+    const wireCanvas = (c: Canvas) => {
+      if (wiredHandlersRef.current.has(c)) return;
+
+      const onDown = (e: { target?: FabricObject }) => {
+        if (!e.target) return;
+        dragState.current = { object: e.target, source: c };
+      };
+
+      const onUp = () => {
+        setTimeout(() => {
+          dragState.current = { object: null, source: null };
+        }, 50);
+      };
+
+      c.on("mouse:down", onDown);
+      c.on("mouse:up", onUp);
+      wiredHandlersRef.current.set(c, { onDown, onUp });
+      wiredCanvasesRef.current.add(c);
+    };
+
+    const unwireCanvas = (c: Canvas) => {
+      const handlers = wiredHandlersRef.current.get(c);
+      if (!handlers) return;
+      c.off("mouse:down", handlers.onDown);
+      c.off("mouse:up", handlers.onUp);
+      wiredHandlersRef.current.delete(c);
+      wiredCanvasesRef.current.delete(c);
+      c.getElement().style.outline = "";
+    };
+
     const handlePointerMove = (e: PointerEvent) => {
       if (!dragState.current.object) return;
       getCanvases().forEach((c) => {
@@ -51,7 +87,6 @@ export function useCanvasDrag(
       const { object, source } = dragState.current;
       if (!object || !source) return;
 
-      // Reset drag state immediately
       dragState.current = { object: null, source: null };
       getCanvases().forEach((c) => {
         c.getElement().style.outline = "";
@@ -70,8 +105,6 @@ export function useCanvasDrag(
 
       if (!target) return;
 
-      // ✅ Defer so we're fully outside Fabric's event call stack
-      // This prevents Tiptap's updateAttributes from remounting the canvas mid-operation
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       const rect = target.getElement().getBoundingClientRect();
@@ -101,21 +134,16 @@ export function useCanvasDrag(
       }
     };
 
-    const interval = setInterval(() => {
-      getCanvases().forEach((c) => {
-        if ((c as any).__dragWired) return;
-        (c as any).__dragWired = true;
-        c.on("mouse:down", (e) => {
-          if (!e.target) return;
-          dragState.current = { object: e.target, source: c };
-        });
-        c.on("mouse:up", () => {
-          setTimeout(() => {
-            dragState.current = { object: null, source: null };
-          }, 50);
-        });
+    const syncWiring = () => {
+      const active = new Set(getCanvases());
+      getCanvases().forEach(wireCanvas);
+      [...wiredCanvasesRef.current].forEach((c) => {
+        if (!active.has(c)) unwireCanvas(c);
       });
-    }, 500);
+    };
+
+    syncWiring();
+    const interval = setInterval(syncWiring, 500);
 
     document.addEventListener("pointermove", handlePointerMove);
     document.addEventListener("pointerup", handlePointerUp);
@@ -124,6 +152,9 @@ export function useCanvasDrag(
       clearInterval(interval);
       document.removeEventListener("pointermove", handlePointerMove);
       document.removeEventListener("pointerup", handlePointerUp);
+      getCanvases().forEach(unwireCanvas);
+      wiredCanvasesRef.current.clear();
+      dragState.current = { object: null, source: null };
     };
   }, []);
 }

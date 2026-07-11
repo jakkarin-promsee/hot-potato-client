@@ -124,15 +124,14 @@ export default function History() {
               </h2>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                 {rows.map((row) => (
-                  <div key={row._id} className="relative">
-                    <ContentCard
-                      title={row.content.title}
-                      coverUrl={row.content.title_image || undefined}
-                      topics={row.content.topics}
-                      author={authorWithRelativeTime(row, t, isThai)}
-                      onClick={() => navigate(`/view/${row.content._id}`)}
-                    />
-                  </div>
+                  <ContentCard
+                    key={row._id}
+                    title={row.content.title}
+                    coverUrl={row.content.title_image || undefined}
+                    topics={row.content.topics}
+                    author={authorWithRelativeTime(row, t, isThai)}
+                    onClick={() => navigate(`/view/${row.content._id}`)}
+                  />
                 ))}
               </div>
             </div>

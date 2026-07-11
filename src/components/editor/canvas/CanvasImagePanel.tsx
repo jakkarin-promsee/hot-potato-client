@@ -557,6 +557,9 @@ export const CanvasImagePanel = memo(
       setSaturation(0);
       setScalePct(100);
       baseScaleRef.current = { x: obj.scaleX ?? 1, y: obj.scaleY ?? 1 };
+      return () => {
+        if (scaleTimerRef.current) clearTimeout(scaleTimerRef.current);
+      };
     }, [obj]);
 
     // ── Canvas element ──────────────────────────────────────────────────────────
