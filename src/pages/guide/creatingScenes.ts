@@ -118,7 +118,7 @@ export const CREATING_SCENES: GuideScene[] = [
   {
     id: "scene-5",
     wide: true,
-    title: { th: "แทรกรูป ตาราง และกระดานวาด", en: "Insert images, tables, and a draw board" },
+    title: { th: "แทรกรูปในบทเรียน", en: "Insert images into your lesson" },
     steps: [
       {
         th: "แผง “สื่อ”: อัปโหลดจากเครื่อง/URL หรือคลิกรูปจากคลังภาพ (ลากรูปมาวางในเอกสารก็ได้)",
@@ -128,19 +128,11 @@ export const CREATING_SCENES: GuideScene[] = [
         th: "คลิกรูปแล้วครอป/ย่อขยาย/จัดวางได้จากแผงขวา · คลังภาพเต็มๆ อยู่ที่หน้า “จัดการคลังภาพ”",
         en: "Click an image to crop/resize/align from the right panel · the full vault lives under “Manage gallery”.",
       },
-      {
-        th: "“เพิ่มกระดานแคนวาส” = พื้นที่วาดรูปในตัว มีเทมเพลต รูปทรง เส้นเชื่อม และปากกา",
-        en: "“Add canvas board” = a built-in drawing area with templates, shapes, connectors, and a pen.",
-      },
     ],
     images: [
       {
         file: "creating-05a-media.webp",
         alt: { th: "แผงสื่อและคลังภาพ", en: "The Media panel and image vault" },
-      },
-      {
-        file: "creating-05b-canvas.webp",
-        alt: { th: "กระดานแคนวาสพร้อมเครื่องมือวาด", en: "The canvas board with drawing tools" },
       },
     ],
   },

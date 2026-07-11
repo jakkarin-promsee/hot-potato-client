@@ -7,7 +7,6 @@ export const GUIDE_IMAGES: Record<string, { width: number; height: number }> = {
   "creating-03-editor-overview.webp": { width: 2560, height: 1600 },
   "creating-04-writing.webp": { width: 2560, height: 1600 },
   "creating-05a-media.webp": { width: 2560, height: 1600 },
-  "creating-05b-canvas.webp": { width: 2560, height: 1600 },
   "creating-06-formula.webp": { width: 800, height: 1170 },
   "creating-07a-question-panel.webp": { width: 2560, height: 1600 },
   "creating-07b-question-creator.webp": { width: 800, height: 1172 },

@@ -375,21 +375,8 @@ const SCENES = [
       return null;
     },
   },
-  {
-    out: "creating-05b-canvas.webp",
-    viewport: "desktop",
-    auth: "teacher",
-    run: async (page) => {
-      await resetScratch();
-      await page.goto(CANVAS_SCRATCH());
-      await waitForEditor(page);
-      await openCategory(page, "ข้อความ");
-      await page.getByRole("button", { name: /เพิ่มกระดานแคนวาส/ }).click();
-      // The fabric canvas takes over both sidebars once its node registers.
-      await page.waitForTimeout(1_500);
-      return null;
-    },
-  },
+  // creating-05b-canvas — omitted from v1 (plan/guide.md §5): Fabric draw board is
+  // complex and rarely used; the creating-showcase teaches images only in scene 5.
   {
     out: "creating-06-formula.webp",
     viewport: "desktop",

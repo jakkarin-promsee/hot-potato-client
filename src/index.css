@@ -254,3 +254,32 @@
   --color-header-bg: var(--background);
   --color-header-border: var(--border);
 }
+
+/* Themed scrollbars — page (html) + optional .scrollbar-themed containers. */
+html,
+.scrollbar-themed {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--color-border) 80%, transparent) transparent;
+}
+
+html::-webkit-scrollbar,
+.scrollbar-themed::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+html::-webkit-scrollbar-track,
+.scrollbar-themed::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html::-webkit-scrollbar-thumb,
+.scrollbar-themed::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--color-border) 80%, transparent);
+  border-radius: 4px;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+.scrollbar-themed::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--color-muted-foreground) 55%, transparent);
+}
