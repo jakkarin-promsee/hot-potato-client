@@ -29,7 +29,7 @@ const TipTapEditor = () => {
   const [dynamicUpdate, setDynamicUpdate] = useState(true);
   const [linkClickMode, setLinkClickMode] = useState<"ctrl" | "direct">("ctrl");
   const [sidebarCategory, setSidebarCategory] = useState<
-    "text" | "media" | "formular" | "special"
+    "ai" | "text" | "media" | "formular" | "special"
   >("text");
   const [zoom, setZoom] = useState(1.0);
   const mainRef = useRef<HTMLDivElement>(null);
@@ -190,6 +190,8 @@ const TipTapEditor = () => {
       // Don't steal focus if the click was inside a custom block (NodeView)
       const target = e.target as HTMLElement;
       if (target.closest("[data-node-view-wrapper]")) return;
+      // Modal overlays (e.g. AiDraftDialog) must keep focus on their inputs.
+      if (target.closest("[data-editor-modal]")) return;
 
       editor.commands.focus("end");
     },

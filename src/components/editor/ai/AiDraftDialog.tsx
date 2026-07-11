@@ -1,10 +1,12 @@
 /**
- * "เริ่มบทเรียนด้วย AI" dialog (Tier 3.5.E) — three tabs:
- * ร่างโครง (outline) · เติมเนื้อหา (fill one section) · วางเนื้อหาเดิม (import).
- * Preview-first everywhere (T2); all prose lands through the tiptap-markdown
- * insertContentAt path.
+ * "เริ่มบทเรียนด้วย AI" dialog (Tier 3.5.E, reworked in 3.5.G) — three tabs:
+ * ร่างโครง (outline, inserts at the caret) · เติมเนื้อหา (fill one section,
+ * optional detail → styleHint, plus suggested-question cards) ·
+ * วางเนื้อหาเดิม (import). Preview-first everywhere (T2); all prose lands
+ * through the tiptap-markdown insertContentAt path.
  */
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/react";
 import { Sparkles, X } from "lucide-react";
 import { callCreator, type GeneratedQuestion } from "@/lib/creatorApi";
@@ -13,6 +15,7 @@ import { useColdStartHint } from "@/hooks/useColdStartHint";
 import MarkdownMessage from "../extensions/MarkdownMessage";
 import { useEditorI18n } from "../editor.i18n";
 import {
+  caretInsertPoint,
   docEndPos,
   insertMarkdownAt,
   listHeadings,
@@ -50,6 +53,7 @@ export default function AiDraftDialog({
   const [topic, setTopic] = useState("");
   const [gradeLevel, setGradeLevel] = useState("");
   const [objectives, setObjectives] = useState("");
+  const [outlineDetail, setOutlineDetail] = useState("");
   const [outlineResult, setOutlineResult] = useState<string | null>(null);
   const [outlineInserted, setOutlineInserted] = useState(false);
 
@@ -60,8 +64,15 @@ export default function AiDraftDialog({
     [editor, tab],
   );
   const [headingIndex, setHeadingIndex] = useState(0);
+  const [fillDetail, setFillDetail] = useState("");
   const [sectionResult, setSectionResult] = useState<string | null>(null);
   const [sectionInserted, setSectionInserted] = useState(false);
+  const [sectionQuestions, setSectionQuestions] = useState<
+    GeneratedQuestion[] | null
+  >(null);
+  const [sectionQStatuses, setSectionQStatuses] = useState<PreviewCardStatus[]>(
+    [],
+  );
 
   // Tab 3 — import
   const [rawText, setRawText] = useState("");
@@ -88,12 +99,13 @@ export default function AiDraftDialog({
   };
 
   const handleOutline = async () => {
-    if (!contentId || !topic.trim()) return;
+    if (!contentId || !topic.trim() || !gradeLevel) return;
     const result = await guard(() =>
       callCreator(contentId, "outline", {
         topic: topic.trim().slice(0, 200),
-        gradeLevel: gradeLevel || undefined,
+        gradeLevel,
         objectives: objectives.trim() ? objectives.trim().slice(0, 1000) : undefined,
+        styleHint: outlineDetail.trim() ? outlineDetail.trim().slice(0, 500) : undefined,
       }),
     );
     if (result) {
@@ -109,11 +121,38 @@ export default function AiDraftDialog({
       callCreator(contentId, "draft_section", {
         heading: heading.text.slice(0, 200),
         outlineMarkdown: outlineSnapshot(editor) || undefined,
+        styleHint: fillDetail.trim() ? fillDetail.trim().slice(0, 500) : undefined,
       }),
     );
     if (result) {
       setSectionResult(result.markdown);
       setSectionInserted(false);
+      setSectionQuestions(null);
+      setSectionQStatuses([]);
+    }
+  };
+
+  // "เลือกคำถาม" for the fill tab (same preview-card flow the import tab has) —
+  // generates from the freshly drafted section text, so it doesn't depend on
+  // the autosave cycle having flushed the insert yet.
+  const handleSectionQuestions = async () => {
+    const heading = headings[headingIndex];
+    if (!contentId || !heading || sectionResult === null) return;
+    const result = await guard(() =>
+      callCreator(contentId, "generate_questions", {
+        scope: "selection",
+        selectionMarkdown: `## ${heading.text}\n\n${sectionResult}`.slice(
+          0,
+          12000,
+        ),
+        types: ["choice", "write"],
+        count: 3,
+        difficulty: "mixed",
+      }),
+    );
+    if (result) {
+      setSectionQuestions(result.questions);
+      setSectionQStatuses(result.questions.map(() => "pending"));
     }
   };
 
@@ -159,15 +198,21 @@ export default function AiDraftDialog({
     </p>
   );
 
-  return (
+  return createPortal(
     <div
+      data-editor-modal
+      role="dialog"
+      aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
     >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative z-10 flex max-h-[85vh] w-[92vw] max-w-xl flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl">
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onMouseDown={onClose}
+      />
+      <div
+        className="relative z-10 flex max-h-[85vh] w-[92vw] max-w-xl flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
           <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <Sparkles size={15} className="text-primary" />
@@ -213,7 +258,7 @@ export default function AiDraftDialog({
                     onChange={(e) => setGradeLevel(e.target.value)}
                     className="mt-1 block rounded-md border border-border bg-background px-2 py-1.5 text-sm font-normal text-foreground"
                   >
-                    <option value="">{t("Not set", "ไม่ระบุ")}</option>
+                    <option value="">{t("Select grade", "เลือกระดับชั้น")}</option>
                     {GRADE_LEVELS.map((g) => (
                       <option key={g} value={g}>
                         {g}
@@ -235,6 +280,25 @@ export default function AiDraftDialog({
                 </label>
               </div>
 
+              <label className="text-xs font-semibold text-muted-foreground">
+                {t(
+                  "What kind of content? (optional)",
+                  "อยากได้เนื้อหาแบบไหน (ไม่บังคับ)",
+                )}
+                <textarea
+                  value={outlineDetail}
+                  onChange={(e) =>
+                    setOutlineDetail(e.target.value.slice(0, 500))
+                  }
+                  rows={2}
+                  placeholder={t(
+                    "e.g. lots of everyday examples, include a mini experiment",
+                    "เช่น เน้นตัวอย่างในชีวิตประจำวัน มีการทดลองสั้น ๆ",
+                  )}
+                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-normal outline-none focus:ring-1 focus:ring-primary/40"
+                />
+              </label>
+
               {errorLine}
               {isLoading && loadingLine}
 
@@ -248,7 +312,7 @@ export default function AiDraftDialog({
                 <button
                   type="button"
                   onClick={() => void handleOutline()}
-                  disabled={isLoading || !topic.trim() || !contentId}
+                  disabled={isLoading || !topic.trim() || !gradeLevel || !contentId}
                   className="flex-1 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {outlineResult === null
@@ -259,7 +323,7 @@ export default function AiDraftDialog({
                   <button
                     type="button"
                     onClick={() => {
-                      insertMarkdownAt(editor, 0, outlineResult);
+                      insertMarkdownAt(editor, caretInsertPoint(editor), outlineResult);
                       setOutlineInserted(true);
                     }}
                     className="flex-1 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
@@ -273,6 +337,14 @@ export default function AiDraftDialog({
                   </span>
                 )}
               </div>
+              {outlineResult !== null && !outlineInserted && (
+                <p className="text-[11px] text-muted-foreground">
+                  {t(
+                    "The outline is inserted where your cursor is in the lesson.",
+                    "โครงจะแทรกตรงตำแหน่งที่เคอร์เซอร์ของครูอยู่ในบทเรียน",
+                  )}
+                </p>
+              )}
             </div>
           )}
 
@@ -296,6 +368,8 @@ export default function AiDraftDialog({
                         setHeadingIndex(Number(e.target.value));
                         setSectionResult(null);
                         setSectionInserted(false);
+                        setSectionQuestions(null);
+                        setSectionQStatuses([]);
                       }}
                       className="mt-1 block w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm font-normal text-foreground"
                     >
@@ -305,6 +379,25 @@ export default function AiDraftDialog({
                         </option>
                       ))}
                     </select>
+                  </label>
+
+                  <label className="text-xs font-semibold text-muted-foreground">
+                    {t(
+                      "What kind of content? (optional)",
+                      "อยากได้เนื้อหาแบบไหน (ไม่บังคับ)",
+                    )}
+                    <textarea
+                      value={fillDetail}
+                      onChange={(e) =>
+                        setFillDetail(e.target.value.slice(0, 500))
+                      }
+                      rows={2}
+                      placeholder={t(
+                        "e.g. lots of everyday examples, include a mini experiment",
+                        "เช่น เน้นตัวอย่างในชีวิตประจำวัน มีการทดลองสั้น ๆ",
+                      )}
+                      className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-normal outline-none focus:ring-1 focus:ring-primary/40"
+                    />
                   </label>
 
                   {errorLine}
@@ -349,6 +442,47 @@ export default function AiDraftDialog({
                       </span>
                     )}
                   </div>
+
+                  {/* Suggested questions from the drafted section (3.5.G) */}
+                  {sectionResult !== null && sectionQuestions === null && (
+                    <button
+                      type="button"
+                      onClick={() => void handleSectionQuestions()}
+                      disabled={isLoading || !contentId}
+                      className="flex items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-3 py-2 text-sm font-semibold text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <Sparkles size={14} />
+                      {t(
+                        "Suggest questions from this section",
+                        "ให้ AI เสนอคำถามจากเนื้อหาส่วนนี้",
+                      )}
+                    </button>
+                  )}
+                  {sectionQuestions !== null && (
+                    <>
+                      <p className="mt-1 text-xs font-semibold text-muted-foreground">
+                        {t("Suggested questions", "คำถามที่ AI เสนอ")}
+                      </p>
+                      {sectionQuestions.map((q, i) => (
+                        <QuestionPreviewCard
+                          key={i}
+                          question={q}
+                          status={sectionQStatuses[i]}
+                          onAdd={() => {
+                            insertGeneratedQuestions(editor, [q]);
+                            setSectionQStatuses((prev) =>
+                              prev.map((s, si) => (si === i ? "added" : s)),
+                            );
+                          }}
+                          onDiscard={() =>
+                            setSectionQStatuses((prev) =>
+                              prev.map((s, si) => (si === i ? "discarded" : s)),
+                            )
+                          }
+                        />
+                      ))}
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -466,6 +600,7 @@ export default function AiDraftDialog({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

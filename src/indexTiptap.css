@@ -501,6 +501,7 @@ button.bg-editor-highlight {
   padding: 0;
   letter-spacing: -0.006em;
   text-wrap: pretty;
+  counter-reset: lesson-section;
 }
 
 .tiptap-editor--editor .ProseMirror {
@@ -557,6 +558,17 @@ button.bg-editor-highlight {
   font-size: clamp(1.45rem, 1.2rem + 0.95vw, 1.9rem);
   font-weight: 700;
   margin-top: 1.25em;
+}
+
+/* Top-level H2 sections: auto 1. 2. 3. — teachers type the title only. */
+.tiptap-editor .ProseMirror > h2 {
+  counter-increment: lesson-section;
+}
+
+.tiptap-editor .ProseMirror > h2::before {
+  content: counter(lesson-section) ". ";
+  font-weight: inherit;
+  color: inherit;
 }
 
 .tiptap-editor .ProseMirror h3 {

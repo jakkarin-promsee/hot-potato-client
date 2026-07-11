@@ -122,7 +122,7 @@ describe("AiCriticButton", () => {
     expect(el.textContent).toContain("Looks great! 🎉");
   });
 
-  it("shows a friendly error and Review again re-calls", async () => {
+  it("shows a friendly error and Try again re-calls", async () => {
     mockCallCreator
       .mockRejectedValueOnce(new Error("boom"))
       .mockResolvedValueOnce(REPORT);
@@ -133,11 +133,10 @@ describe("AiCriticButton", () => {
     });
     expect(el.textContent).toContain("AI is busy");
 
-    // Re-open path: dialog is still open; run again via the report-less state
     await act(async () => {
-      findButton(el, "Review").click(); // header button (dialog already open, no-op fetch since report null → runCritic)
+      findButton(el, "Try again").click();
     });
-    // second call happened
     expect(mockCallCreator).toHaveBeenCalledTimes(2);
+    expect(el.textContent).toContain("บทเรียนอ่านลื่น");
   });
 });

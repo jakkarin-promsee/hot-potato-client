@@ -17,7 +17,6 @@ import {
 import { useCanvasStore } from "@/stores/canvas.store";
 import PublishSettingsModal from "./PublishSettingsModal";
 import AiWritingAssistant from "./ai/AiWritingAssistant";
-import AiDraftLauncher from "./ai/AiDraftLauncher";
 import AiCriticButton from "./ai/AiCriticButton";
 import { useEditorI18n } from "./editor.i18n";
 
@@ -283,7 +282,6 @@ const EditorHeader = memo(
           </IconBtn>
           <div className="mx-1 h-4 w-px bg-border" />
           <AiWritingAssistant editor={editor} />
-          <AiDraftLauncher editor={editor} variant="header" />
           </div>
 
           {/* ── RIGHT ── */}

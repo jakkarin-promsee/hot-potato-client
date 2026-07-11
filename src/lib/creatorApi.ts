@@ -109,7 +109,12 @@ export interface CreatorActionMap {
     result: { distractors: string[] };
   };
   outline: {
-    payload: { topic: string; gradeLevel?: string; objectives?: string };
+    payload: {
+      topic: string;
+      gradeLevel?: string;
+      objectives?: string;
+      styleHint?: string;
+    };
     result: { outlineMarkdown: string };
   };
   draft_section: {

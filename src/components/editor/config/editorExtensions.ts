@@ -15,6 +15,7 @@ import TaskItem from "@tiptap/extension-task-item";
 import { Markdown } from "tiptap-markdown";
 import Link from "@tiptap/extension-link";
 import { SearchHighlightExtension } from "../extensions/SearchHighlight";
+import { NumberedSectionHeadingsExtension } from "../extensions/numberedSectionHeadings";
 import { FabricCanvasNode } from "../extensions/FabricCanvasNode";
 import { QuestionChoiceNode } from "../extensions/QuestionChoiceNode";
 import { QuestionWriteNode } from "../extensions/QuestionWriteNode";
@@ -70,6 +71,7 @@ export const createEditorExtensions = (editable = true) => [
   TaskList,
   TaskItem.configure({ nested: true }),
   SearchHighlightExtension,
+  NumberedSectionHeadingsExtension,
   FabricCanvasNode,
   FormulaBlockNode,
   QuestionChoiceNode,

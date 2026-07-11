@@ -165,13 +165,14 @@ Each `*Node.ts` defines the TipTap node (schema/attrs); each `*View.tsx` is its 
 
 | Surface | Where | Action(s) |
 | --- | --- | --- |
-| `AiQuestionDialog` | Question panel in `EditorLeftSidebar` | `generate_questions` → preview cards → real question nodes (`questionInsert.ts` maps `guideAnswer`→`answer`, `answerType: "single"`, default feedbackMode, trailing paragraph) |
+| `AiToolsPanel` | **The AI hub (3.5.G):** 5th left-sidebar category "AI" (leads the rail, primary-tinted) — every tool below as a card with a Thai/English description, grouped by workflow (เริ่มบทเรียน → เขียนและเกลา → คำถาม → ก่อนเผยแพร่). Opens the same dialogs as the header entries. | — (hub only) |
+| `AiQuestionDialog` | Question panel in `EditorLeftSidebar` + AI hub card | `generate_questions` → preview cards → real question nodes (`questionInsert.ts` maps `guideAnswer`→`answer`, `answerType: "single"`, default feedbackMode, trailing paragraph) |
 | Guide-answer draft | `QuestionWriteView` creator mode (empty answer only) | `guide_answer` |
 | Distractor chips | `QuestionChoiceView` creator mode | `distractors` (appended as `correct: false`) |
 | `AiFormulaPanel` | `FormulaBlock/FormulaCanvas` edit mode | `formula_latex` → writes via the same `persistLatex` path as manual edits |
-| `AiWritingAssistant` | EditorHeader dropdown "ปรับข้อความ" (acts on selection) | `proofread` (6 presets incl. reading_level) |
-| `AiDraftLauncher` + `AiDraftDialog` | EditorHeader "ร่างบทเรียน" + empty-doc CTA | `outline` · `draft_section` · `import_structure` |
-| `AiCriticButton` | EditorHeader near Publish | `critic` (informational only — never gates publish) |
+| `AiWritingAssistant` + `AiWritingToolCard` | EditorHeader "AI text" button + AI hub live-status card. Both share `WritingPreviewDialog`. | `proofread` (6 presets incl. reading_level) |
+| `AiDraftLauncher` + `AiDraftDialog` | Empty-doc CTA + AI hub cards (one per tab); no header button. `AiDraftDialog` portals to `document.body` (`data-editor-modal`) so `.editor-main`'s focus-on-click handler cannot steal focus from dialog inputs. Outline inserts **at the caret** (`caretInsertPoint` in `draftHelpers.ts`); the fill tab sends an optional detail box as `styleHint` and offers suggested-question cards (`generate_questions` `scope: "selection"` on the fresh section text). | `outline` · `draft_section` · `import_structure` (+ `generate_questions` from the fill tab) |
+| `AiCriticButton` (shared `AiCriticDialog`) | EditorHeader near Publish + AI hub card (each trigger caches its own report) | `critic` (informational only — never gates publish) |
 | Publish autofill | `PublishSettingsModal` | `lesson_meta` · `agent_settings_suggest` |
 
 Rules that must not regress: **preview → accept** (AI output enters the doc only via a normal editor transaction after the teacher accepts; reject leaves the doc untouched); **AI prose is markdown** inserted through tiptap-markdown's `insertContentAt` override (string content parses as markdown — round-trip guarded by `ai/__tests__/writingAssist.test.ts`); question blocks arrive as typed JSON already validated server-side, never raw TipTap JSON. The writing assistant is a header dropdown, **not** a BubbleMenu — the editor card's CSS `zoom` makes floating-ui anchoring unreliable.
@@ -194,7 +195,7 @@ Feedback verbosity is still controlled by `feedbackMode` (`quick_check` | `full_
 
 ### Editor UI shell
 
-`TipTapEditor.tsx` defines the layout (top bar, left/right sidebars, main area). `TiptapViewer.tsx` / `FabricCanvasReadOnly.tsx` render the read-only student view. Zoom is a single CSS `zoom` property on the card container (switched from `transform: scale()` on 2026-07-10: `zoom` scales layout height along with the visuals, which killed the double-scrollbar bug in the viewer) — custom nodes don't implement their own zoom. In the viewer the **window is the only vertical scroller**; `.editor-main` never overflows. Toolbar items are `memo()`'d for performance; `dynamicUpdate` toggles "static mode" so they re-render with editor state when needed (details in `components/README.md`).
+`TipTapEditor.tsx` defines the layout (top bar, left/right sidebars, main area). `TiptapViewer.tsx` / `FabricCanvasReadOnly.tsx` render the read-only student view. Zoom is a single CSS `zoom` property on the card container (switched from `transform: scale()` on 2026-07-10: `zoom` scales layout height along with the visuals, which killed the double-scrollbar bug in the viewer) — custom nodes don't implement their own zoom. In the viewer the **window is the only vertical scroller**; `.editor-main` never overflows. Toolbar items are `memo()`'d for performance; `dynamicUpdate` toggles "static mode" so they re-render with editor state when needed (details in `components/README.md`). **Top-level H2 sections** auto-display `1. 2. 3.` via CSS (`indexTiptap.css`); `numberedSectionHeadings` strips any manual `1.` prefixes teachers paste so reordering never leaves stale numbers.
 
 ## Persistence model (what the client sends)
 

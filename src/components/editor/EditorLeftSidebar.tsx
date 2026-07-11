@@ -35,6 +35,7 @@ import {
 } from "./FormulaBlock/formulaToolbarBus";
 import { createFormulaRow } from "./FormulaBlock/formulaReducer";
 import AiQuestionDialog from "./ai/AiQuestionDialog";
+import AiToolsPanel from "./ai/AiToolsPanel";
 import { useEditorI18n } from "./editor.i18n";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -57,7 +58,7 @@ const ALIGN_OPTIONS = [
   { icon: AlignJustify, align: "justify" },
 ] as const;
 
-type CategoryKey = "text" | "media" | "formular" | "special";
+type CategoryKey = "ai" | "text" | "media" | "formular" | "special";
 type TextAlign = "left" | "center" | "right" | "justify";
 
 interface LeftActiveFormats {
@@ -89,6 +90,9 @@ const CATEGORIES: {
   icon: React.ElementType;
   label: string;
 }[] = [
+  // The AI hub leads the rail on purpose (3.5.G) — it's the flagship tool
+  // for low-tech teachers and must be impossible to miss.
+  { key: "ai", icon: Sparkles, label: "AI" },
   { key: "text", icon: Type, label: "Text" },
   { key: "media", icon: Images, label: "Media" },
   { key: "formular", icon: Sigma, label: "Formula" },
@@ -184,19 +188,26 @@ const CategoryBtn = memo(
     label,
     isActive,
     onClick,
+    accent = false,
   }: {
     icon: React.ElementType;
     label: string;
     isActive: boolean;
     onClick: () => void;
+    /** Primary-tinted rest state (the AI hub) so it stands out in the rail. */
+    accent?: boolean;
   }) => (
     <button
       onClick={onClick}
       title={label}
       className={`relative flex flex-col items-center justify-center gap-1.5 rounded-lg px-1 py-3 w-full transition-all duration-150 ${
         isActive
-          ? "bg-accent text-foreground"
-          : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+          ? accent
+            ? "bg-primary/10 text-primary"
+            : "bg-accent text-foreground"
+          : accent
+            ? "text-primary hover:bg-primary/10"
+            : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
       }`}
     >
       {isActive && (
@@ -1101,6 +1112,8 @@ const EditorLeftSidebar = ({
 
   const renderPanel = () => {
     switch (activeCategory) {
+      case "ai":
+        return <AiToolsPanel editor={editor} />;
       case "text":
         return <TextPanel editor={editor} active={active} />;
       case "media":
@@ -1120,14 +1133,17 @@ const EditorLeftSidebar = ({
           <CategoryBtn
             key={key}
             icon={icon}
+            accent={key === "ai"}
             label={
-              key === "text"
-                ? t("Text", "ข้อความ")
-                : key === "media"
-                  ? t("Media", "สื่อ")
-                  : key === "formular"
-                    ? t("Formula", "สูตร")
-                    : t("Question", "คำถาม")
+              key === "ai"
+                ? t("AI", "AI")
+                : key === "text"
+                  ? t("Text", "ข้อความ")
+                  : key === "media"
+                    ? t("Media", "สื่อ")
+                    : key === "formular"
+                      ? t("Formula", "สูตร")
+                      : t("Question", "คำถาม")
             }
             isActive={activeCategory === key}
             onClick={() => onCategoryChange(key)}
@@ -1138,13 +1154,15 @@ const EditorLeftSidebar = ({
       {/* Tool panel */}
       <div className="flex w-120 flex-col overflow-y-auto p-2.5">
         <p className="mb-2 px-1 text-sm font-semibold text-foreground capitalize">
-          {activeCategory === "text"
-            ? t("Text", "ข้อความ")
-            : activeCategory === "media"
-              ? t("Media", "สื่อ")
-              : activeCategory === "formular"
-                ? t("Formula", "สูตร")
-                : t("Question", "คำถาม")}
+          {activeCategory === "ai"
+            ? t("AI Helper", "ผู้ช่วย AI")
+            : activeCategory === "text"
+              ? t("Text", "ข้อความ")
+              : activeCategory === "media"
+                ? t("Media", "สื่อ")
+                : activeCategory === "formular"
+                  ? t("Formula", "สูตร")
+                  : t("Question", "คำถาม")}
         </p>
         {renderPanel()}
       </div>

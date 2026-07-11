@@ -26,7 +26,7 @@ vi.mock("@/stores/canvas.store", () => ({
     selector({ contentId: "content-1" }),
 }));
 
-import AiWritingAssistant from "../AiWritingAssistant";
+import AiWritingAssistant, { AiWritingToolCard } from "../AiWritingAssistant";
 
 let container: HTMLDivElement | null = null;
 let root: Root | null = null;
@@ -78,7 +78,7 @@ function findButton(el: HTMLElement, text: string): HTMLButtonElement {
 }
 
 describe("AiWritingAssistant", () => {
-  it("is disabled without a selection", () => {
+  it("stays clickable without a selection and shows the select-first how-to (3.5.G)", () => {
     editor = new Editor({
       extensions: [StarterKit, Markdown],
       content: "<p>ไม่มีการเลือก</p>",
@@ -86,7 +86,20 @@ describe("AiWritingAssistant", () => {
     const el = render(
       <AiWritingAssistant editor={editor as unknown as ReactEditor} />,
     );
-    expect(findButton(el, "AI text").hasAttribute("disabled")).toBe(true);
+    const btn = findButton(el, "AI text");
+    expect(btn.hasAttribute("disabled")).toBe(false);
+
+    act(() => {
+      btn.click();
+    });
+    // Guidance instead of actions — no dead-end for low-tech teachers
+    expect(el.textContent).toContain("Not selected yet");
+    expect(el.textContent).toContain("Drag over the text");
+    expect(
+      [...el.querySelectorAll("button")].some((b) =>
+        (b.textContent ?? "").includes("Fix typos"),
+      ),
+    ).toBe(false);
   });
 
   it("proofread action sends the selection with the right preset and previews", async () => {
@@ -195,5 +208,44 @@ describe("AiWritingAssistant", () => {
     expect(findButton(el, "Try again")).toBeTruthy();
     expect(findButton(el, "Apply").hasAttribute("disabled")).toBe(true);
     expect(JSON.stringify(ed.getJSON())).toBe(before);
+  });
+});
+
+describe("AiWritingToolCard (sidebar hub, 3.5.G)", () => {
+  it("shows the how-to and disables actions without a selection", () => {
+    editor = new Editor({
+      extensions: [StarterKit, Markdown],
+      content: "<p>ไม่มีการเลือก</p>",
+    });
+    const el = render(
+      <AiWritingToolCard editor={editor as unknown as ReactEditor} />,
+    );
+    expect(el.textContent).toContain("Not selected yet");
+    expect(findButton(el, "Fix typos").hasAttribute("disabled")).toBe(true);
+  });
+
+  it("shows the selection snippet and runs an action end to end", async () => {
+    mockCallCreator.mockResolvedValueOnce({ markdown: "ประโยคเดิมที่มีคำผิด" });
+    const ed = makeEditorWithSelection();
+    const el = render(
+      <AiWritingToolCard editor={ed as unknown as ReactEditor} />,
+    );
+
+    expect(el.textContent).toContain("Selected:");
+    expect(el.textContent).toContain("ประโยคเดิมที่มีคำผิk");
+
+    await act(async () => {
+      findButton(el, "Fix typos").click();
+    });
+    expect(mockCallCreator).toHaveBeenCalledWith("content-1", "proofread", {
+      markdown: "ประโยคเดิมที่มีคำผิk",
+      preset: "proofread",
+      gradeLevel: undefined,
+    });
+
+    act(() => {
+      findButton(el, "Apply").click();
+    });
+    expect(ed.state.doc.textContent).toBe("ประโยคเดิมที่มีคำผิด");
   });
 });

@@ -45,13 +45,37 @@ export function outlineSnapshot(editor: Editor, cap = 4000): string {
     .slice(0, cap);
 }
 
+/** Insert target: a single position or a range to replace. */
+export type InsertPoint = number | { from: number; to: number };
+
+/**
+ * Where "insert at the caret" should land for block-level AI content
+ * (Tier 3.5.G — the outline used to land at doc top, ignoring the teacher's
+ * cursor):
+ * - effectively-empty doc → 0
+ * - caret on an empty paragraph → replace that paragraph (no stray blank line)
+ * - otherwise → right after the top-level block holding the caret
+ */
+export function caretInsertPoint(editor: Editor): InsertPoint {
+  if (isDocEffectivelyEmpty(editor)) return 0;
+  const { $to } = editor.state.selection;
+  if ($to.depth === 0) return $to.pos;
+  const block = $to.node(1);
+  const from = $to.before(1);
+  const to = $to.after(1);
+  if (block.type.name === "paragraph" && block.content.size === 0) {
+    return { from, to };
+  }
+  return to;
+}
+
 /**
  * Insert AI markdown at a position (tiptap-markdown parses string content —
  * the same sanctioned path as the writing assistant).
  */
 export function insertMarkdownAt(
   editor: Editor,
-  pos: number,
+  pos: InsertPoint,
   markdown: string,
 ): void {
   editor.chain().focus().insertContentAt(pos, markdown).run();
