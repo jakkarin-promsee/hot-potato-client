@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useCanvasStore } from "@/stores/canvas.store";
 import PublishSettingsModal from "./PublishSettingsModal";
+import AiWritingAssistant from "./ai/AiWritingAssistant";
 import { useEditorI18n } from "./editor.i18n";
 
 const IconBtn = memo(
@@ -278,6 +279,8 @@ const EditorHeader = memo(
               <p>{isThai ? "ทำซ้ำ" : "Redo"}</p>
             </div>
           </IconBtn>
+          <div className="mx-1 h-4 w-px bg-border" />
+          <AiWritingAssistant editor={editor} />
           </div>
 
           {/* ── RIGHT ── */}
