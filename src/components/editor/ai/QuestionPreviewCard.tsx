@@ -81,11 +81,16 @@ export default function QuestionPreviewCard({
   status,
   onAdd,
   onDiscard,
+  addDisabled = false,
+  addDisabledHint,
 }: {
   question: GeneratedQuestion;
   status: PreviewCardStatus;
   onAdd: () => void;
   onDiscard: () => void;
+  /** When true, "Add to lesson" stays visible but cannot be clicked yet. */
+  addDisabled?: boolean;
+  addDisabledHint?: string;
 }) {
   const { t } = useEditorI18n();
   if (status === "discarded") return null;
@@ -109,21 +114,27 @@ export default function QuestionPreviewCard({
       </div>
       <CardBody question={question} />
       {status === "pending" && (
-        <div className="mt-2 flex gap-2">
-          <button
-            type="button"
-            onClick={onAdd}
-            className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90"
-          >
-            <Plus size={12} /> {t("Add to lesson", "เพิ่มลงบทเรียน")}
-          </button>
-          <button
-            type="button"
-            onClick={onDiscard}
-            className="flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground transition hover:bg-accent"
-          >
-            <Trash2 size={12} /> {t("Discard", "ทิ้ง")}
-          </button>
+        <div className="mt-2 flex flex-col gap-1.5">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onAdd}
+              disabled={addDisabled}
+              className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Plus size={12} /> {t("Add to lesson", "เพิ่มลงบทเรียน")}
+            </button>
+            <button
+              type="button"
+              onClick={onDiscard}
+              className="flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground transition hover:bg-accent"
+            >
+              <Trash2 size={12} /> {t("Discard", "ทิ้ง")}
+            </button>
+          </div>
+          {addDisabled && addDisabledHint && (
+            <p className="text-[11px] text-muted-foreground">{addDisabledHint}</p>
+          )}
         </div>
       )}
     </div>

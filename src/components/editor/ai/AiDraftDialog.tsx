@@ -11,6 +11,7 @@ import type { Editor } from "@tiptap/react";
 import { Sparkles, X } from "lucide-react";
 import { callCreator, type GeneratedQuestion } from "@/lib/creatorApi";
 import { useCanvasStore } from "@/stores/canvas.store";
+import { useCreatorGradeLevelStore } from "@/stores/creatorGradeLevel.store";
 import { useColdStartHint } from "@/hooks/useColdStartHint";
 import MarkdownMessage from "../extensions/MarkdownMessage";
 import { useEditorI18n } from "../editor.i18n";
@@ -18,11 +19,13 @@ import {
   caretInsertPoint,
   docEndPos,
   formatHeadingOptionLabel,
+  formatHeadingBelowOptionLabel,
   formatLessonMarkdownPreview,
   insertMarkdownAt,
   listHeadings,
   outlineSnapshot,
   sectionEndInsertPos,
+  stripLeadingSectionHeading,
 } from "./draftHelpers";
 import { GRADE_LEVELS } from "./writingAssist";
 import { insertGeneratedQuestions } from "./questionInsert";
@@ -54,7 +57,8 @@ export default function AiDraftDialog({
 
   // Tab 1 — outline
   const [topic, setTopic] = useState("");
-  const [gradeLevel, setGradeLevel] = useState("");
+  const gradeLevel = useCreatorGradeLevelStore((s) => s.gradeLevel);
+  const setGradeLevel = useCreatorGradeLevelStore((s) => s.setGradeLevel);
   const [objectives, setObjectives] = useState("");
   const [outlineDetail, setOutlineDetail] = useState("");
   const [outlineResult, setOutlineResult] = useState<string | null>(null);
@@ -82,6 +86,8 @@ export default function AiDraftDialog({
 
   // Tab 3 — import
   const [rawText, setRawText] = useState("");
+  const [importDetail, setImportDetail] = useState("");
+  const [importHeadingIndex, setImportHeadingIndex] = useState(0);
   const [importResult, setImportResult] = useState<{
     markdown: string;
     suggestedQuestions: GeneratedQuestion[];
@@ -89,6 +95,38 @@ export default function AiDraftDialog({
   const [importInserted, setImportInserted] = useState(false);
   const [questionStatuses, setQuestionStatuses] = useState<PreviewCardStatus[]>(
     [],
+  );
+  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
+
+  const hasUnsavedWork =
+    isLoading ||
+    fillLoading !== null ||
+    outlineResult !== null ||
+    sectionResult !== null ||
+    sectionQuestions !== null ||
+    importResult !== null ||
+    topic.trim().length > 0 ||
+    objectives.trim().length > 0 ||
+    outlineDetail.trim().length > 0 ||
+    fillDetail.trim().length > 0 ||
+    rawText.trim().length > 0 ||
+    importDetail.trim().length > 0;
+
+  const requestClose = () => {
+    if (!hasUnsavedWork) {
+      onClose();
+      return;
+    }
+    setCloseConfirmOpen(true);
+  };
+
+  const insertFirstHint = t(
+    "Insert the section content below the heading first, then you can add questions.",
+    "แทรกเนื้อหาใต้หัวข้อก่อน แล้วค่อยเพิ่มคำถามได้",
+  );
+  const importContentFirstHint = t(
+    "Insert the lesson content first, then you can add questions.",
+    "ใส่เนื้อหาลงบทเรียนก่อน แล้วค่อยเพิ่มคำถามได้",
   );
 
   const guard = async <T,>(call: () => Promise<T>): Promise<T | null> => {
@@ -133,7 +171,9 @@ export default function AiDraftDialog({
     );
     setFillLoading(null);
     if (result) {
-      setSectionResult(result.markdown);
+      setSectionResult(
+        stripLeadingSectionHeading(result.markdown, heading.text),
+      );
       setSectionInserted(false);
       setSectionQuestions(null);
       setSectionQStatuses([]);
@@ -171,6 +211,9 @@ export default function AiDraftDialog({
     const result = await guard(() =>
       callCreator(contentId, "import_structure", {
         rawText: rawText.trim().slice(0, IMPORT_CAP),
+        styleHint: importDetail.trim()
+          ? importDetail.trim().slice(0, 500)
+          : undefined,
       }),
     );
     if (result) {
@@ -178,6 +221,13 @@ export default function AiDraftDialog({
       setImportInserted(false);
       setQuestionStatuses(result.suggestedQuestions.map(() => "pending"));
     }
+  };
+
+  const importInsertPos = () => {
+    const currentHeadings = listHeadings(editor);
+    if (currentHeadings.length === 0) return docEndPos(editor);
+    const idx = Math.min(importHeadingIndex, currentHeadings.length - 1);
+    return sectionEndInsertPos(editor, idx, currentHeadings);
   };
 
   const tabBtn = (key: DraftTab, labelEn: string, labelTh: string) => (
@@ -217,10 +267,10 @@ export default function AiDraftDialog({
     >
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onMouseDown={onClose}
+        onMouseDown={requestClose}
       />
       <div
-        className="relative z-10 flex max-h-[85vh] w-[92vw] max-w-xl flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl"
+        className="relative z-10 flex h-[90vh] w-[96vw] max-w-[1500px] flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
@@ -230,7 +280,7 @@ export default function AiDraftDialog({
           </span>
           <button
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
             aria-label={t("Close", "ปิด")}
             className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
@@ -244,7 +294,7 @@ export default function AiDraftDialog({
           {tabBtn("import", "Import existing", "วางเนื้อหาเดิม")}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6">
           {/* ── Tab 1: outline ── */}
           {tab === "outline" && (
             <div className="flex flex-col gap-3">
@@ -430,7 +480,11 @@ export default function AiDraftDialog({
                     <button
                       type="button"
                       onClick={() => void handleFillSection()}
-                      disabled={isLoading || !contentId}
+                      disabled={
+                        isLoading ||
+                        !contentId ||
+                        (sectionResult !== null && sectionInserted)
+                      }
                       className="flex-1 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       {sectionResult === null
@@ -460,8 +514,8 @@ export default function AiDraftDialog({
                     )}
                   </div>
 
-                  {/* Suggested questions from the drafted section (3.5.G) */}
-                  {sectionResult !== null && sectionQuestions === null && (
+                  {/* Suggested questions — only after the section is in the lesson */}
+                  {sectionResult !== null && sectionInserted && (
                     <>
                       {fillLoading === "questions" && (
                         <p className="text-sm text-muted-foreground">
@@ -483,12 +537,22 @@ export default function AiDraftDialog({
                         className="flex items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-3 py-2 text-sm font-semibold text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <Sparkles size={14} />
-                        {t(
-                          "Suggest questions from this section",
-                          "ให้ AI เสนอคำถามจากเนื้อหาส่วนนี้",
-                        )}
+                        {sectionQuestions === null
+                          ? t(
+                              "Suggest questions from this section",
+                              "ให้ AI เสนอคำถามจากเนื้อหาส่วนนี้",
+                            )
+                          : t(
+                              "Suggest new questions",
+                              "ให้ AI เสนอคำถามใหม่",
+                            )}
                       </button>
                     </>
+                  )}
+                  {sectionResult !== null && !sectionInserted && (
+                    <p className="text-[11px] text-muted-foreground">
+                      {insertFirstHint}
+                    </p>
                   )}
                   {sectionQuestions !== null && (
                     <>
@@ -500,7 +564,10 @@ export default function AiDraftDialog({
                           key={i}
                           question={q}
                           status={sectionQStatuses[i]}
+                          addDisabled={!sectionInserted}
+                          addDisabledHint={insertFirstHint}
                           onAdd={() => {
+                            if (!sectionInserted) return;
                             insertGeneratedQuestions(editor, [q], sectionEndInsertPos(
                               editor,
                               headingIndex,
@@ -527,12 +594,30 @@ export default function AiDraftDialog({
           {/* ── Tab 3: import existing material ── */}
           {tab === "import" && (
             <div className="flex flex-col gap-3">
+              {headings.length > 0 && (
+                <label className="text-xs font-semibold text-muted-foreground">
+                  {t("Where to place it", "ตำแหน่งที่ต้องการจะวาง")}
+                  <select
+                    value={importHeadingIndex}
+                    onChange={(e) => setImportHeadingIndex(Number(e.target.value))}
+                    disabled={importInserted}
+                    className="mt-1 block w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm font-normal text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {headings.map((h, i) => (
+                      <option key={`${h.insertPos}-${i}`} value={i}>
+                        {formatHeadingBelowOptionLabel(h)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
               {importResult === null ? (
                 <>
                   <label className="text-xs font-semibold text-muted-foreground">
                     {t(
                       "Paste your existing material (old sheets, Word text, ChatGPT output)",
-                      "วางเนื้อหาเดิมของครู (ชีทเก่า ไฟล์ Word หรือที่เคยถาม ChatGPT ไว้)",
+                      "วางเนื้อหาเดิมของครู",
                     )}
                     <textarea
                       value={rawText}
@@ -540,12 +625,35 @@ export default function AiDraftDialog({
                         setRawText(e.target.value.slice(0, IMPORT_CAP))
                       }
                       rows={8}
+                      placeholder={t(
+                        "e.g. old worksheet, Word export, or a ChatGPT answer you saved",
+                        "เช่น ชีทเก่า ไฟล์ Word หรือที่เคยถาม ChatGPT ไว้",
+                      )}
                       className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-normal outline-none focus:ring-1 focus:ring-primary/40"
                     />
                   </label>
                   <p className="text-right text-[11px] text-muted-foreground">
                     {rawText.length.toLocaleString()} / {IMPORT_CAP.toLocaleString()}
                   </p>
+
+                  <label className="text-xs font-semibold text-muted-foreground">
+                    {t(
+                      "What kind of content? (optional)",
+                      "อยากได้เนื้อหาแบบไหน (ไม่บังคับ)",
+                    )}
+                    <textarea
+                      value={importDetail}
+                      onChange={(e) =>
+                        setImportDetail(e.target.value.slice(0, 500))
+                      }
+                      rows={2}
+                      placeholder={t(
+                        "e.g. lots of everyday examples, include a mini experiment",
+                        "เช่น เน้นตัวอย่างในชีวิตประจำวัน มีการทดลองสั้น ๆ",
+                      )}
+                      className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-normal outline-none focus:ring-1 focus:ring-primary/40"
+                    />
+                  </label>
 
                   {errorLine}
                   {isLoading && loadingLine}
@@ -568,7 +676,7 @@ export default function AiDraftDialog({
                       "ตรวจร่างที่จัดแล้ว เลือกใส่เฉพาะส่วนที่ครูต้องการได้เลย",
                     )}
                   </p>
-                  <div className="max-h-64 overflow-y-auto rounded-lg border border-primary/30 bg-primary/5 p-3">
+                  <div className="max-h-[min(50vh,520px)] overflow-y-auto rounded-lg border border-primary/30 bg-primary/5 p-3">
                     <MarkdownMessage
                       text={formatLessonMarkdownPreview(importResult.markdown)}
                       className="text-sm"
@@ -581,7 +689,7 @@ export default function AiDraftDialog({
                         onClick={() => {
                           insertMarkdownAt(
                             editor,
-                            docEndPos(editor),
+                            importInsertPos(),
                             importResult.markdown,
                           );
                           setImportInserted(true);
@@ -618,8 +726,11 @@ export default function AiDraftDialog({
                           key={i}
                           question={q}
                           status={questionStatuses[i]}
+                          addDisabled={!importInserted}
+                          addDisabledHint={importContentFirstHint}
                           onAdd={() => {
-                            insertGeneratedQuestions(editor, [q]);
+                            if (!importInserted) return;
+                            insertGeneratedQuestions(editor, [q], importInsertPos());
                             setQuestionStatuses((prev) =>
                               prev.map((s, si) => (si === i ? "added" : s)),
                             );
@@ -639,6 +750,49 @@ export default function AiDraftDialog({
           )}
         </div>
       </div>
+
+      {closeConfirmOpen && (
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 p-4"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setCloseConfirmOpen(false);
+          }}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl border border-border bg-background p-5 shadow-2xl"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-base font-semibold">
+              {t("Leave this dialog?", "ออกจากหน้าต่างนี้?")}
+            </h3>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              {t(
+                "Your draft and previews will be lost if you leave now.",
+                "ร่างและตัวอย่างที่ยังไม่ได้ใส่จะหายไปถ้าออกตอนนี้",
+              )}
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setCloseConfirmOpen(false)}
+                className="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-accent"
+              >
+                {t("Stay", "อยู่ต่อ")}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCloseConfirmOpen(false);
+                  onClose();
+                }}
+                className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+              >
+                {t("Leave", "ออก")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>,
     document.body,
   );

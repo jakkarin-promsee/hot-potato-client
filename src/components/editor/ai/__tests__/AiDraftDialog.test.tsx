@@ -38,6 +38,7 @@ vi.mock("@/stores/canvas.store", () => ({
 import AiDraftDialog from "../AiDraftDialog";
 import AiDraftLauncher from "../AiDraftLauncher";
 import { listHeadings, sectionEndInsertPos } from "../draftHelpers";
+import { useCreatorGradeLevelStore } from "@/stores/creatorGradeLevel.store";
 
 let container: HTMLDivElement | null = null;
 let root: Root | null = null;
@@ -72,6 +73,8 @@ afterEach(() => {
 beforeEach(() => {
   mockCallCreator.mockReset();
   mockInsertQuestions.mockReset();
+  localStorage.clear();
+  useCreatorGradeLevelStore.setState({ gradeLevel: "" });
 });
 
 function makeEditor(content: string): Editor {
@@ -100,6 +103,12 @@ function setInputValue(
     setter.call(input, value);
     input.dispatchEvent(new Event("input", { bubbles: true }));
   });
+}
+
+function findCloseButton(el: HTMLElement): HTMLButtonElement {
+  const btn = el.querySelector('button[aria-label="Close"]');
+  if (!btn) throw new Error('close button not found');
+  return btn as HTMLButtonElement;
 }
 
 function setSelectValue(select: HTMLSelectElement, value: string) {
@@ -216,7 +225,9 @@ describe("AiDraftDialog — outline tab", () => {
 
 describe("AiDraftDialog — fill tab", () => {
   it("lists doc headings, drafts a section, and inserts below the heading", async () => {
-    mockCallCreator.mockResolvedValueOnce({ markdown: "เนื้อหาบทนำจาก AI" });
+    mockCallCreator.mockResolvedValueOnce({
+      markdown: "## บทนำ\n\nเนื้อหาบทนำจาก AI",
+    });
     const ed = makeEditor("<h2>บทนำ</h2><h2>สรุป</h2>");
     render(
       <AiDraftDialog
@@ -274,6 +285,16 @@ describe("AiDraftDialog — fill tab", () => {
       styleHint: "เน้นการทดลองสั้น ๆ",
     });
 
+    // Must insert section content before the suggest-questions step appears
+    expect(dialog.textContent).not.toContain(
+      "Suggest questions from this section",
+    );
+
+    act(() => {
+      findButton(dialog, "Insert below heading").click();
+    });
+    expect(findButton(dialog, "Write again").disabled).toBe(true);
+
     mockCallCreator.mockResolvedValueOnce({
       questions: [
         {
@@ -298,6 +319,7 @@ describe("AiDraftDialog — fill tab", () => {
       },
     );
     expect(dialog.textContent).toContain("ทำไมผลการทดลองเป็นแบบนี้");
+    expect(dialog.textContent).toContain("Suggest new questions");
     expect(mockInsertQuestions).not.toHaveBeenCalled();
 
     act(() => {
@@ -333,7 +355,7 @@ describe("AiDraftDialog — fill tab", () => {
 });
 
 describe("AiDraftDialog — import tab", () => {
-  it("caps the textarea, imports, and inserts markdown + accepted questions", async () => {
+  it("caps the textarea, imports with styleHint, and inserts markdown + accepted questions", async () => {
     mockCallCreator.mockResolvedValueOnce({
       markdown: "## จากชีทเดิม\n\nเนื้อหาที่จัดแล้ว",
       suggestedQuestions: [
@@ -354,9 +376,11 @@ describe("AiDraftDialog — import tab", () => {
     );
     const dialog = dialogEl();
 
+    const textareas = dialog.querySelectorAll("textarea");
+    setInputValue(textareas[0] as HTMLTextAreaElement, "เนื้อหาชีทเก่าของครู");
     setInputValue(
-      dialog.querySelector("textarea") as HTMLTextAreaElement,
-      "เนื้อหาชีทเก่าของครู",
+      textareas[1] as HTMLTextAreaElement,
+      "เน้นตัวอย่างในชีวิตประจำวัน",
     );
     await act(async () => {
       findButton(dialog, "Restructure into a lesson").click();
@@ -364,7 +388,10 @@ describe("AiDraftDialog — import tab", () => {
     expect(mockCallCreator).toHaveBeenCalledWith(
       "content-1",
       "import_structure",
-      { rawText: "เนื้อหาชีทเก่าของครู" },
+      {
+        rawText: "เนื้อหาชีทเก่าของครู",
+        styleHint: "เน้นตัวอย่างในชีวิตประจำวัน",
+      },
     );
     // Nothing inserted until accepted
     expect(ed.state.doc.textContent).toBe("");
@@ -387,6 +414,128 @@ describe("AiDraftDialog — import tab", () => {
       },
     ]);
     expect(dialog.textContent).toContain("Added");
+  });
+
+  it("inserts imported content at the bottom of the chosen section", async () => {
+    mockCallCreator.mockResolvedValueOnce({
+      markdown: "เนื้อหาจากชีท",
+      suggestedQuestions: [],
+    });
+    const ed = makeEditor("<h2>บทนำ</h2><p>เดิม</p><h2>สรุป</h2>");
+    render(
+      <AiDraftDialog
+        editor={ed as unknown as ReactEditor}
+        onClose={() => {}}
+        initialTab="import"
+      />,
+    );
+    const dialog = dialogEl();
+
+    const select = dialog.querySelector("select") as HTMLSelectElement;
+    expect(select.options[0].textContent).toContain("ล่าง 1. บทนำ");
+
+    setInputValue(
+      dialog.querySelector("textarea") as HTMLTextAreaElement,
+      "ชีทของครู",
+    );
+    await act(async () => {
+      findButton(dialog, "Restructure into a lesson").click();
+    });
+
+    act(() => {
+      findButton(dialog, "Insert the content").click();
+    });
+    const headings = listHeadings(ed as unknown as ReactEditor);
+    const text = ed.state.doc
+      .textBetween(0, ed.state.doc.content.size, "\n")
+      .replace(/\n+$/, "");
+    expect(text).toBe("บทนำ\nเดิม\nเนื้อหาจากชีท\nสรุป");
+    expect(sectionEndInsertPos(ed as unknown as ReactEditor, 0, headings)).toBe(
+      headings[1].pos,
+    );
+  });
+
+  it("shows a hint before import questions can be added", async () => {
+    mockCallCreator.mockResolvedValueOnce({
+      markdown: "## จากชีทเดิม\n\nเนื้อหาที่จัดแล้ว",
+      suggestedQuestions: [
+        {
+          type: "write",
+          question: "สรุปใจความหลัก",
+          guideAnswer: "แนวเฉลยนำเข้า",
+        },
+      ],
+    });
+    const ed = makeEditor("");
+    render(
+      <AiDraftDialog
+        editor={ed as unknown as ReactEditor}
+        onClose={() => {}}
+        initialTab="import"
+      />,
+    );
+    const dialog = dialogEl();
+
+    setInputValue(
+      dialog.querySelector("textarea") as HTMLTextAreaElement,
+      "เนื้อหาชีทเก่า",
+    );
+    await act(async () => {
+      findButton(dialog, "Restructure into a lesson").click();
+    });
+
+    expect(findButton(dialog, "Add to lesson").disabled).toBe(true);
+    expect(mockInsertQuestions).not.toHaveBeenCalled();
+
+    act(() => {
+      findButton(dialog, "Insert the content").click();
+    });
+    expect(findButton(dialog, "Add to lesson").disabled).toBe(false);
+  });
+
+  it("asks for confirmation before closing when there is draft work", async () => {
+    const onClose = vi.fn();
+    const ed = makeEditor("");
+    render(
+      <AiDraftDialog editor={ed as unknown as ReactEditor} onClose={onClose} />,
+    );
+    const dialog = dialogEl();
+
+    setInputValue(
+      dialog.querySelector("input") as HTMLInputElement,
+      "หัวข้อทดสอบ",
+    );
+    act(() => {
+      findCloseButton(dialog).click();
+    });
+    expect(onClose).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain("Leave this dialog?");
+
+    act(() => {
+      findButton(document.body as HTMLElement, "Stay").click();
+    });
+    expect(onClose).not.toHaveBeenCalled();
+    expect(document.body.textContent).not.toContain("Leave this dialog?");
+
+    act(() => {
+      findCloseButton(dialog).click();
+    });
+    act(() => {
+      findButton(document.body as HTMLElement, "Leave").click();
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes immediately when the dialog is still empty", () => {
+    const onClose = vi.fn();
+    const ed = makeEditor("");
+    render(
+      <AiDraftDialog editor={ed as unknown as ReactEditor} onClose={onClose} />,
+    );
+    act(() => {
+      findCloseButton(dialogEl()).click();
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("portals to document.body so editor-main click handlers cannot steal input focus", () => {

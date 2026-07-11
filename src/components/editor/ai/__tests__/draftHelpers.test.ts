@@ -6,13 +6,17 @@ import { Markdown } from "tiptap-markdown";
 import type { Editor as ReactEditor } from "@tiptap/react";
 import {
   docEndPos,
+  formatHeadingBelowOptionLabel,
   formatHeadingOptionLabel,
   formatLessonMarkdownPreview,
   insertMarkdownAt,
   isDocEffectivelyEmpty,
   listHeadings,
   outlineSnapshot,
+  sectionContentMarkdown,
   sectionEndInsertPos,
+  selectedSectionsMarkdown,
+  stripLeadingSectionHeading,
 } from "../draftHelpers";
 
 function makeEditor(content: string): Editor {
@@ -50,6 +54,7 @@ describe("listHeadings / outlineSnapshot", () => {
     expect(headings.map((h) => h.sectionNumber)).toEqual([1, null]);
     expect(formatHeadingOptionLabel(headings[0])).toBe("1. บทนำ");
     expect(formatHeadingOptionLabel(headings[1])).toBe("–– แรงเสียดทาน");
+    expect(formatHeadingBelowOptionLabel(headings[0])).toBe("ล่าง 1. บทนำ");
     // insertPos = right after the heading node
     expect(headings[0].insertPos).toBeGreaterThan(0);
     expect(outlineSnapshot(asReact(editor))).toBe("## บทนำ\n### แรงเสียดทาน");
@@ -116,6 +121,28 @@ describe("formatLessonMarkdownPreview", () => {
   });
 });
 
+describe("stripLeadingSectionHeading", () => {
+  it("removes a duplicated ## line (with or without manual numbering)", () => {
+    expect(
+      stripLeadingSectionHeading(
+        "## 1. บทนำ\n\nเนื้อหา",
+        "บทนำ",
+      ),
+    ).toBe("เนื้อหา");
+    expect(
+      stripLeadingSectionHeading(
+        "## บทนำ\n\nย่อหน้าแรก",
+        "บทนำ",
+      ),
+    ).toBe("ย่อหน้าแรก");
+  });
+
+  it("leaves markdown unchanged when the opening line is not the same heading", () => {
+    const raw = "## หัวข้ออื่น\n\nเนื้อหา";
+    expect(stripLeadingSectionHeading(raw, "บทนำ")).toBe(raw);
+  });
+});
+
 describe("sectionEndInsertPos", () => {
   it("returns the next same-or-higher-level heading, not the doc end", () => {
     const editor = makeEditor(
@@ -135,6 +162,20 @@ describe("sectionEndInsertPos", () => {
     const headings = listHeadings(asReact(editor));
     expect(sectionEndInsertPos(asReact(editor), 1, headings)).toBe(
       headings[2].pos,
+    );
+    editor.destroy();
+  });
+
+  it("builds section markdown for selected headings", () => {
+    const editor = makeEditor(
+      "<h2>บทนำ</h2><p>เนื้อหาแรก</p><h2>สรุป</h2><p>เนื้อหาสอง</p>",
+    );
+    const headings = listHeadings(asReact(editor));
+    expect(sectionContentMarkdown(asReact(editor), 0, headings)).toBe(
+      "## บทนำ\n\nเนื้อหาแรก",
+    );
+    expect(selectedSectionsMarkdown(asReact(editor), [0, 1], headings)).toBe(
+      "## บทนำ\n\nเนื้อหาแรก\n\n## สรุป\n\nเนื้อหาสอง",
     );
     editor.destroy();
   });

@@ -122,8 +122,10 @@ describe("FeedbackDiscussionPanel (0.C de-nest)", () => {
       />,
     );
     expect(el.querySelector("[data-testid='suggestion-chips']")).toBeNull();
-    // i18n falls back to English in the test environment
-    expect(el.textContent).toContain("AI is typing...");
+    // The rotating "AI is thinking" indicator (a random funny line) is shown.
+    const thinking = el.querySelector("[data-testid='ai-thinking']");
+    expect(thinking).not.toBeNull();
+    expect(thinking?.textContent?.trim().length ?? 0).toBeGreaterThan(0);
   });
 
   it("send button meets the 44px touch height", () => {

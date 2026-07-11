@@ -16,6 +16,7 @@ import {
 } from "./extensions/tutorApi";
 import AiErrorRetry from "./extensions/AiErrorRetry";
 import MarkdownMessage from "./extensions/MarkdownMessage";
+import AiThinkingMessage from "./extensions/AiThinkingMessage";
 import SuggestionChips from "./extensions/SuggestionChips";
 import PersonalityPicker from "./extensions/PersonalityPicker";
 
@@ -451,12 +452,11 @@ function TiptapViewer({ onScrollDirectionChange }: TiptapViewerProps) {
                     className="max-w-[90%] rounded-2xl rounded-bl-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800"
                   />
                 </div>
-              ) : isAsking && showColdStart ? (
-                <p className="text-sm text-muted-foreground">
-                  ปลุก AI แป๊บนึงนะ เซิร์ฟเวอร์เพิ่งตื่น 😴
-                </p>
               ) : isAsking ? (
-                <p className="text-sm text-muted-foreground">AI กำลังพิมพ์...</p>
+                <AiThinkingMessage
+                  coldStart={showColdStart}
+                  className="text-sm text-muted-foreground"
+                />
               ) : null}
               {askError && (
                 <AiErrorRetry

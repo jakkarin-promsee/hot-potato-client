@@ -97,6 +97,8 @@ export interface CreatorActionMap {
       types: GeneratedQuestionType[];
       count: number;
       difficulty?: "easy" | "medium" | "hard" | "mixed";
+      gradeLevel?: string;
+      styleHint?: string;
     };
     result: { questions: GeneratedQuestion[] };
   };
@@ -122,7 +124,7 @@ export interface CreatorActionMap {
     result: { markdown: string };
   };
   import_structure: {
-    payload: { rawText: string };
+    payload: { rawText: string; styleHint?: string };
     result: { markdown: string; suggestedQuestions: GeneratedQuestion[] };
   };
   critic: { payload: Record<string, never>; result: CriticReport };

@@ -56,6 +56,19 @@ export function generatedQuestionToNode(q: GeneratedQuestion): QuestionNodeJson 
 }
 
 /**
+ * Position captured when a question dialog opens — the modal steals focus, so
+ * callers must snapshot the caret once up front and pass it to every insert.
+ */
+export function captureQuestionInsertPos(editor: Editor): number {
+  const { $from } = editor.state.selection;
+  try {
+    return $from.after(1);
+  } catch {
+    return editor.state.doc.content.size;
+  }
+}
+
+/**
  * Block boundary after the current selection when the editor is focused,
  * else the end of the document (the dialog usually holds focus, so end-of-doc
  * is the common, predictable case).

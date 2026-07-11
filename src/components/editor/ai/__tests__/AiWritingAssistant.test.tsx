@@ -27,6 +27,7 @@ vi.mock("@/stores/canvas.store", () => ({
 }));
 
 import AiWritingAssistant, { AiWritingToolCard } from "../AiWritingAssistant";
+import { useCreatorGradeLevelStore } from "@/stores/creatorGradeLevel.store";
 
 let container: HTMLDivElement | null = null;
 let root: Root | null = null;
@@ -53,6 +54,8 @@ afterEach(() => {
 
 beforeEach(() => {
   mockCallCreator.mockReset();
+  localStorage.clear();
+  useCreatorGradeLevelStore.setState({ gradeLevel: "" });
 });
 
 function selectAllText(ed: Editor) {

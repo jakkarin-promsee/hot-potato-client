@@ -19,6 +19,7 @@ import type { Editor } from "@tiptap/react";
 import { ChevronDown, Sparkles, X } from "lucide-react";
 import { callCreator } from "@/lib/creatorApi";
 import { useCanvasStore } from "@/stores/canvas.store";
+import { useCreatorGradeLevelStore } from "@/stores/creatorGradeLevel.store";
 import { useColdStartHint } from "@/hooks/useColdStartHint";
 import MarkdownMessage from "../extensions/MarkdownMessage";
 import { useEditorI18n } from "../editor.i18n";
@@ -74,8 +75,10 @@ export function WritingPreviewDialog({
 }) {
   const { t } = useEditorI18n();
   const contentId = useCanvasStore((s) => s.contentId);
+  const storedGrade = useCreatorGradeLevelStore((s) => s.gradeLevel);
+  const setStoredGrade = useCreatorGradeLevelStore((s) => s.setGradeLevel);
+  const gradeLevel = storedGrade || GRADE_LEVELS[3];
 
-  const [gradeLevel, setGradeLevel] = useState(GRADE_LEVELS[3]);
   const [result, setResult] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -143,7 +146,7 @@ export function WritingPreviewDialog({
                 {t("Grade level", "ระดับชั้น")}
                 <select
                   value={gradeLevel}
-                  onChange={(e) => setGradeLevel(e.target.value)}
+                  onChange={(e) => setStoredGrade(e.target.value)}
                   className="mt-1 block rounded-md border border-border bg-background px-2 py-1.5 text-sm font-normal text-foreground"
                 >
                   {GRADE_LEVELS.map((g) => (

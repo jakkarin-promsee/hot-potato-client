@@ -70,6 +70,34 @@ export function formatHeadingOptionLabel(heading: HeadingEntry): string {
   return indent ? `${indent} ${heading.text}` : heading.text;
 }
 
+/** Label for placing content at the bottom of a section (before the next heading). */
+export function formatHeadingBelowOptionLabel(heading: HeadingEntry): string {
+  return `ล่าง ${formatHeadingOptionLabel(heading)}`;
+}
+
+/**
+ * Remove a leading markdown heading when AI echoes the section title back —
+ * fill-tab content inserts *below* the existing heading node, so a repeated
+ * `## Title` line would duplicate it in the lesson.
+ */
+export function stripLeadingSectionHeading(
+  markdown: string,
+  headingText: string,
+): string {
+  const target = stripLeadingSectionNumber(headingText.trim());
+  let rest = markdown.trimStart();
+  let stripped = false;
+  while (true) {
+    const match = rest.match(/^(#{1,6})\s+(.+?)(?:\r?\n|$)/);
+    if (!match) break;
+    const title = stripLeadingSectionNumber(match[2].trim());
+    if (title !== target) break;
+    rest = rest.slice(match[0].length).replace(/^\r?\n+/, "");
+    stripped = true;
+  }
+  return stripped ? rest.trim() : markdown;
+}
+
 /**
  * Prepends auto `1. 2. 3.` to top-level `##` lines in AI markdown previews —
  * mirrors the editor CSS counters (resets after each `#` H1 line). On insert,
@@ -161,4 +189,31 @@ export function sectionEndInsertPos(
     }
   }
   return docEndPos(editor);
+}
+
+/** Plain-text snapshot of one section (heading + body) for AI question prompts. */
+export function sectionContentMarkdown(
+  editor: Editor,
+  headingIndex: number,
+  headings: HeadingEntry[] = listHeadings(editor),
+): string {
+  const heading = headings[headingIndex];
+  if (!heading) return "";
+  const end = sectionEndInsertPos(editor, headingIndex, headings);
+  const hashes = "#".repeat(Math.min(heading.level, 6));
+  const body = editor.state.doc.textBetween(heading.insertPos, end, "\n\n").trim();
+  return body ? `${hashes} ${heading.text}\n\n${body}` : `${hashes} ${heading.text}`;
+}
+
+export function selectedSectionsMarkdown(
+  editor: Editor,
+  selectedIndices: number[],
+  headings: HeadingEntry[] = listHeadings(editor),
+  cap = 12000,
+): string {
+  return [...selectedIndices]
+    .sort((a, b) => a - b)
+    .map((i) => sectionContentMarkdown(editor, i, headings))
+    .join("\n\n")
+    .slice(0, cap);
 }

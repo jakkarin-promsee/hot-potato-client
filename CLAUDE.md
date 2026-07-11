@@ -115,6 +115,7 @@ Global stores in `src/stores/`. Each is a `create()` store; some use the `persis
 | `cloudinary.store` | Image upload / library state |
 | `canvas.store` | Canvas-related UI state + `agentSettings` for publish modal (Tier 1.B) |
 | `tutorPersonality.store` | Student tutor preset id (**persisted** as `tutor-personality-storage`); auto-attached on every `/chat/tutor` call |
+| `creatorGradeLevel.store` | Teacher's last picked grade level for creator AI (**persisted** as `creator-grade-level`); shared by outline, question generator, and writing assistant |
 | `language.store` | UI language (Thai / English) |
 | `theme.store` | Light / dark theme |
 | `appearance.store` | App-wide font size (`small…xlarge`; persisted as `app-font-size`); applies `%` to `document.documentElement.style.fontSize` at module load — imported in `main.tsx` so it runs on every route. Separate mechanism from the viewer's CSS `zoom`; never merge them. |

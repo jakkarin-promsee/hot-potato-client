@@ -19,6 +19,7 @@ import {
 } from "./tutorApi";
 import AiErrorRetry from "./AiErrorRetry";
 import MarkdownMessage from "./MarkdownMessage";
+import AiThinkingMessage from "./AiThinkingMessage";
 import SuggestionChips from "./SuggestionChips";
 import BlockMoveControls from "./BlockMoveControls";
 import BlockDeleteButton from "./BlockDeleteButton";
@@ -245,17 +246,8 @@ export default function QuestionAgentView({
                     className="max-w-[85%] rounded-2xl rounded-bl-md border border-gray-200 bg-gray-50 px-3 py-2 text-base text-gray-800 shadow-sm"
                   />
                 </div>
-              ) : isAsking && showColdStart ? (
-                <p className="text-sm text-gray-400">
-                  {t(
-                    "Waking the AI up, one sec…",
-                    "ปลุก AI แป๊บนึงนะ เซิร์ฟเวอร์เพิ่งตื่น 😴",
-                  )}
-                </p>
               ) : isAsking ? (
-                <p className="text-sm text-gray-400">
-                  {t("AI is typing...", "AI กำลังพิมพ์...")}
-                </p>
+                <AiThinkingMessage coldStart={showColdStart} />
               ) : null}
             </div>
 
