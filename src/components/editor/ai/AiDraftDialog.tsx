@@ -13,6 +13,7 @@ import { callCreator, type GeneratedQuestion } from "@/lib/creatorApi";
 import { useCanvasStore } from "@/stores/canvas.store";
 import { useCreatorGradeLevelStore } from "@/stores/creatorGradeLevel.store";
 import { useColdStartHint } from "@/hooks/useColdStartHint";
+import AiThinkingMessage from "../extensions/AiThinkingMessage";
 import MarkdownMessage from "../extensions/MarkdownMessage";
 import { useEditorI18n } from "../editor.i18n";
 import {
@@ -53,7 +54,6 @@ export default function AiDraftDialog({
   // Shared AI-call state (one call at a time per dialog)
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(false);
-  const showColdStart = useColdStartHint(isLoading);
 
   // Tab 1 — outline
   const [topic, setTopic] = useState("");
@@ -83,6 +83,8 @@ export default function AiDraftDialog({
   const [fillLoading, setFillLoading] = useState<"section" | "questions" | null>(
     null,
   );
+  const isAiBusy = isLoading || fillLoading !== null;
+  const showColdStart = useColdStartHint(isAiBusy);
 
   // Tab 3 — import
   const [rawText, setRawText] = useState("");
@@ -245,11 +247,10 @@ export default function AiDraftDialog({
   );
 
   const loadingLine = (
-    <p className="text-sm text-muted-foreground">
-      {showColdStart
-        ? t("Waking the AI up, one sec…", "ปลุก AI แป๊บนึงนะ เซิร์ฟเวอร์เพิ่งตื่น 😴")
-        : t("Drafting…", "น้องมันฝรั่งกำลังร่างให้… 🥔✍️")}
-    </p>
+    <AiThinkingMessage
+      coldStart={showColdStart}
+      className="text-sm text-muted-foreground"
+    />
   );
 
   const errorLine = error && (
@@ -517,19 +518,7 @@ export default function AiDraftDialog({
                   {/* Suggested questions — only after the section is in the lesson */}
                   {sectionResult !== null && sectionInserted && (
                     <>
-                      {fillLoading === "questions" && (
-                        <p className="text-sm text-muted-foreground">
-                          {showColdStart
-                            ? t(
-                                "Waking the AI up, one sec…",
-                                "ปลุก AI แป๊บนึงนะ เซิร์ฟเวอร์เพิ่งตื่น 😴",
-                              )
-                            : t(
-                                "Thinking up questions…",
-                                "น้องมันฝรั่งกำลังคิดคำถาม… 🥔",
-                              )}
-                        </p>
-                      )}
+                      {fillLoading === "questions" && loadingLine}
                       <button
                         type="button"
                         onClick={() => void handleSectionQuestions()}

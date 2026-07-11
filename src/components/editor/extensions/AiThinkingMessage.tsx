@@ -11,7 +11,7 @@ import { useEditorI18n } from "../editor.i18n";
  * `t(en, th)`; Thai is the funny one, English is a friendly fallback.
  */
 
-const ROTATE_MS = 2500;
+const ROTATE_MS = 3000;
 
 export const AI_THINKING_MESSAGES: { en: string; th: string }[] = [
   { en: "Frying up some crispy thoughts 🥔", th: "น้องมันฝรั่งกำลังทอดความคิดให้กรอบ 🥔" },
