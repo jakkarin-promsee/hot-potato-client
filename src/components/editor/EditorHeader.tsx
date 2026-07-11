@@ -18,6 +18,7 @@ import { useCanvasStore } from "@/stores/canvas.store";
 import PublishSettingsModal from "./PublishSettingsModal";
 import AiWritingAssistant from "./ai/AiWritingAssistant";
 import AiDraftLauncher from "./ai/AiDraftLauncher";
+import AiCriticButton from "./ai/AiCriticButton";
 import { useEditorI18n } from "./editor.i18n";
 
 const IconBtn = memo(
@@ -406,6 +407,7 @@ const EditorHeader = memo(
                 : "Open on Ctrl+Click"}
           </button>
           <div className="mx-1.5 h-4 w-px bg-border" />
+          <AiCriticButton editor={editor} />
           <button
             className="rounded-full bg-editor-highlight px-4 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
             onClick={handlePublic}

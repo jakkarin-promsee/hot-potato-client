@@ -1,6 +1,17 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, Copy, Images, Loader2, Plus, Trash2, Upload, X } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Images,
+  Loader2,
+  Plus,
+  Sparkles,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
+import { callCreator } from "@/lib/creatorApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -144,6 +155,12 @@ function PublishSettingsModal({ open, onClose }: PublishSettingsModalProps) {
   const [shareCopied, setShareCopied] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  // ✨ AI autofill (Tier 3.5.F) — fills the form fields; saving stays manual
+  const [aiMetaLoading, setAiMetaLoading] = useState(false);
+  const [aiMetaError, setAiMetaError] = useState(false);
+  const [aiAgentLoading, setAiAgentLoading] = useState(false);
+  const [aiAgentError, setAiAgentError] = useState(false);
+  const [aiAgentReason, setAiAgentReason] = useState("");
 
   const contentId = useCanvasStore((s) => s.contentId);
   const title = useCanvasStore((s) => s.title);
@@ -269,6 +286,74 @@ function PublishSettingsModal({ open, onClose }: PublishSettingsModalProps) {
     onClose();
   };
 
+  // Empty fields fill silently; existing content asks one confirm first.
+  const handleAutofillMeta = async () => {
+    if (!contentId) return;
+    setAiMetaLoading(true);
+    setAiMetaError(false);
+    try {
+      const meta = await callCreator(contentId, "lesson_meta", {});
+      const titleEmpty = !title.trim() || title.trim() === "Untitled";
+      const descEmpty = !description.trim();
+      const topicsEmpty = topics.length === 0;
+      let overwrite = true;
+      if (!titleEmpty || !descEmpty || !topicsEmpty) {
+        overwrite = window.confirm(
+          t(
+            "Some fields already have content — overwrite them with the AI suggestion?",
+            "มีข้อมูลเดิมอยู่บางช่อง เขียนทับด้วยของที่ AI แนะนำไหม?",
+          ),
+        );
+      }
+      if (titleEmpty || overwrite) setTitle(meta.title);
+      if (descEmpty || overwrite) setDescription(meta.description);
+      if (topicsEmpty || overwrite) setTopics(meta.topics);
+    } catch {
+      setAiMetaError(true);
+    } finally {
+      setAiMetaLoading(false);
+    }
+  };
+
+  const handleSuggestAgentSettings = async () => {
+    if (!contentId) return;
+    setAiAgentLoading(true);
+    setAiAgentError(false);
+    try {
+      const s = await callCreator(contentId, "agent_settings_suggest", {});
+      const personaEmpty = !agentSettings.persona_note.trim();
+      const guidelinesEmpty = !agentSettings.custom_guidelines.trim();
+      let overwrite = true;
+      if (!personaEmpty || !guidelinesEmpty) {
+        overwrite = window.confirm(
+          t(
+            "You already wrote tutor settings — overwrite them with the AI suggestion?",
+            "ครูตั้งค่าติวเตอร์ไว้แล้วบางส่วน เขียนทับด้วยของที่ AI แนะนำไหม?",
+          ),
+        );
+      }
+      setAgentSettings({
+        persona_note:
+          personaEmpty || overwrite
+            ? s.persona_note
+            : agentSettings.persona_note,
+        custom_guidelines:
+          guidelinesEmpty || overwrite
+            ? s.custom_guidelines
+            : agentSettings.custom_guidelines,
+        scope: overwrite ? s.scope : agentSettings.scope,
+        allow_direct_answers: overwrite
+          ? s.allow_direct_answers
+          : agentSettings.allow_direct_answers,
+      });
+      setAiAgentReason(s.reason);
+    } catch {
+      setAiAgentError(true);
+    } finally {
+      setAiAgentLoading(false);
+    }
+  };
+
   const handlePublishNow = async () => {
     if (!contentId) return;
     if (accessType === "private") setAccessType("public");
@@ -308,6 +393,32 @@ function PublishSettingsModal({ open, onClose }: PublishSettingsModalProps) {
         </div>
 
         <div className="grid gap-5 p-5 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void handleAutofillMeta()}
+              disabled={aiMetaLoading || !contentId}
+              className="gap-2"
+            >
+              {aiMetaLoading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Sparkles className="size-4" />
+              )}
+              {t(
+                "AI autofill: title · description · topics",
+                "ให้ AI ช่วยกรอก ชื่อ · คำอธิบาย · หัวข้อ",
+              )}
+            </Button>
+            {aiMetaError && (
+              <p className="mt-1.5 text-xs text-amber-700">
+                {t("AI is busy, try again 🥔", "AI ไม่ว่างแป๊บนึง ลองอีกทีนะ 🥔")}
+              </p>
+            )}
+          </div>
+
           <div className="space-y-2 md:col-span-2">
             <Label>{t("Title", "ชื่อเรื่อง")}</Label>
             <Input
@@ -491,6 +602,35 @@ function PublishSettingsModal({ open, onClose }: PublishSettingsModalProps) {
                   "ปรับพฤติกรรม AI ติวเตอร์ของบทเรียนนี้ เว้นว่างไว้เพื่อใช้ค่าเริ่มต้นที่เป็นมิตร",
                 )}
               </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void handleSuggestAgentSettings()}
+                disabled={aiAgentLoading || !contentId}
+                className="mt-2 gap-2"
+              >
+                {aiAgentLoading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Sparkles className="size-4" />
+                )}
+                {t(
+                  "AI suggest tutor settings",
+                  "ให้ AI แนะนำการตั้งค่าติวเตอร์",
+                )}
+              </Button>
+              {aiAgentError && (
+                <p className="mt-1.5 text-xs text-amber-700">
+                  {t("AI is busy, try again 🥔", "AI ไม่ว่างแป๊บนึง ลองอีกทีนะ 🥔")}
+                </p>
+              )}
+              {aiAgentReason && (
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  💡 {t("Why: ", "เหตุผลจาก AI: ")}
+                  {aiAgentReason}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
