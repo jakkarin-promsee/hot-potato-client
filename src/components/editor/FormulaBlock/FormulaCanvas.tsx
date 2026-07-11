@@ -13,6 +13,7 @@ import "katex/dist/katex.min.css";
 import { Eye, EyeOff, SquareDashedMousePointer } from "lucide-react";
 import { createFormulaRow } from "./formulaReducer";
 import { formulaToLatex } from "./formulaToLatex";
+import AiFormulaPanel from "./AiFormulaPanel";
 import BlockMoveControls from "../extensions/BlockMoveControls";
 import {
   setActiveFormulaBlock,
@@ -367,6 +368,10 @@ export default function FormulaCanvas({
                 fontFamily: "'STIX Two Math', 'Latin Modern Math', serif",
               }}
             >
+              <AiFormulaPanel
+                onLatex={persistLatex}
+                renderFailed={Boolean(latexInput.trim()) && !renderResult}
+              />
               <div className="grid grid-cols-8 gap-1">
                 {quickTemplates.map((item) => (
                   <button
