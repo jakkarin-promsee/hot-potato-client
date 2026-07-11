@@ -18,7 +18,7 @@ export const LEARNING_SCENES: GuideScene[] = [
         en: "This site is where you read lessons, answer think-questions, and chat with a free AI tutor.",
       },
       {
-        th: "เข้ามาแล้วกดปุ่ม “Start exploring” ได้ทันที",
+        th: "เข้ามาแล้วกดปุ่ม “เริ่มสำรวจเลย” ได้ทันที",
         en: "Land on the home page and tap “Start exploring”.",
       },
       {

@@ -3,20 +3,21 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createRoot, type Root } from "react-dom/client";
 import { act } from "react";
 import { MemoryRouter } from "react-router-dom";
-import Guide from "../Guide";
+import Landing from "../Landing";
 import { useLanguageStore } from "@/stores/language.store";
+import { BRAND_NAME } from "@/lib/brand";
 
 let container: HTMLDivElement | null = null;
 let root: Root | null = null;
 
-function renderHub() {
+function renderLanding() {
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
   act(() => {
     root!.render(
       <MemoryRouter>
-        <Guide />
+        <Landing />
       </MemoryRouter>,
     );
   });
@@ -35,12 +36,20 @@ afterEach(() => {
   root = null;
 });
 
-describe("Guide hub", () => {
-  it("renders both role cards and the explore shortcut", () => {
-    const el = renderHub();
+describe("Landing (landing + guide hub merged)", () => {
+  it("renders the hero with the brand name and the explore CTA", () => {
+    const el = renderLanding();
+    expect(el.textContent).toContain(BRAND_NAME);
+    expect(el.textContent).toContain("เริ่มสำรวจเลย");
+
+    const hrefs = [...el.querySelectorAll("a")].map((a) => a.getAttribute("href"));
+    expect(hrefs).toContain("/explore");
+  });
+
+  it("renders both role cards and the explore shortcut (the former hub)", () => {
+    const el = renderLanding();
     expect(el.textContent).toContain("ฉันเป็นนักเรียน");
     expect(el.textContent).toContain("ฉันเป็นครู");
-    expect(el.textContent).toContain("คู่มือการใช้งาน");
 
     const hrefs = [...el.querySelectorAll("a")].map((a) => a.getAttribute("href"));
     expect(hrefs).toContain("/guide/learning");
@@ -53,8 +62,9 @@ describe("Guide hub", () => {
     act(() => {
       useLanguageStore.getState().setLanguage("en");
     });
-    const el = renderHub();
+    const el = renderLanding();
     expect(el.textContent).toContain("I'm a student");
     expect(el.textContent).toContain("I'm a teacher");
+    expect(el.textContent).toContain("Start exploring");
   });
 });

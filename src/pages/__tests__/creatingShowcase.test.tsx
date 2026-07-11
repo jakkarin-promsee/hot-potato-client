@@ -68,7 +68,7 @@ describe("creating showcase", () => {
   it("final CTA + cross-link point at real app routes", () => {
     const el = renderPage();
     const hrefs = [...el.querySelectorAll("a")].map((a) => a.getAttribute("href"));
-    for (const target of ["/create", "/guide/learning", "/guide"]) {
+    for (const target of ["/create", "/guide/learning", "/"]) {
       expect(hrefs).toContain(target);
     }
   });

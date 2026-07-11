@@ -68,7 +68,7 @@ describe("learning showcase", () => {
   it("deep-link CTAs point at real app routes", () => {
     const el = renderPage();
     const hrefs = [...el.querySelectorAll("a")].map((a) => a.getAttribute("href"));
-    for (const target of ["/explore", "/settings", "/login", "/guide/creating", "/guide"]) {
+    for (const target of ["/explore", "/settings", "/login", "/guide/creating", "/"]) {
       expect(hrefs).toContain(target);
     }
   });

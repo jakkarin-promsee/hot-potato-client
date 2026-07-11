@@ -2,6 +2,8 @@ import { useEffect, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useAppI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import { useRevealOnScrollUp } from "@/hooks/useRevealOnScrollUp";
 import { Button } from "@/components/ui/button";
 import type { BilingualText, GuideScene } from "../scenes";
 import { SceneSection } from "./SceneSection";
@@ -26,6 +28,7 @@ export function ShowcaseShell({
 }: ShowcaseShellProps) {
   const { t } = useAppI18n();
   const { hash } = useLocation();
+  const navRevealed = useRevealOnScrollUp(true);
 
   // Deep links like /guide/learning#scene-4: the browser's native hash jump
   // fires before this lazy page mounts, so re-run it once the scenes exist.
@@ -38,11 +41,11 @@ export function ShowcaseShell({
     <div className="pb-24 md:pb-12">
       <div className="container px-4 pt-10 text-center">
         <Link
-          to="/guide"
+          to="/"
           className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          {t("Guide", "คู่มือ")}
+          {t("Home", "หน้าแรก")}
         </Link>
         <h1 className="mt-3 font-serif text-3xl font-bold sm:text-4xl">
           {t(title.en, title.th)}
@@ -53,9 +56,14 @@ export function ShowcaseShell({
       </div>
 
       {scenes.length > 0 && (
-        // Numbered TOC chips — sticky so readers can hop between scenes.
-        <nav className="sticky top-[var(--app-nav-height,3.5rem)] z-10 mt-8 border-y border-border bg-background/90 backdrop-blur">
-          <div className="container flex gap-2 overflow-x-auto px-4 py-2">
+        // Numbered TOC chips — reveal on scroll-up (paired with TopNav on guide showcases).
+        <nav
+          className={cn(
+            "sticky z-10 mt-8 border-y border-border bg-background/90 backdrop-blur transition-[transform,top] duration-200",
+            navRevealed ? "top-(--app-nav-height)" : "top-0 -translate-y-full",
+          )}
+        >
+          <div className="scrollbar-themed container flex gap-2 overflow-x-auto px-4 py-2">
             {scenes.map((scene, i) => (
               <a
                 key={scene.id}

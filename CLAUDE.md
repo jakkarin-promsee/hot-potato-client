@@ -75,10 +75,10 @@ Defined in `App.tsx` with three guard components. `BrowserRouter` + `QueryClient
 
 | Path | Page | Guard | Notes |
 | --- | --- | --- | --- |
-| `/` | `Landing` | — | Marketing/landing |
+| `/` | `Landing` | — | **Home = landing + guide hub merged (2026-07-11):** hero pitch (bilingual, `BRAND_NAME`) + role cards → the two showcases + contact footer. Eager import; inside `AppLayout` |
 | `/login` | `Login` | `PublicRoute` | Redirects away if already logged in |
 | `/explore` | `Explore` | — | Browse public lessons |
-| `/guide` | `Guide` | — | Guide **hub** (Tier G2): role cards → the two showcases below + Explore shortcut |
+| `/guide` | — | — | Redirect → `/` (`Navigate replace`; the Tier G2 hub was merged into Landing 2026-07-11) |
 | `/guide/learning` | `guide/LearningShowcase` | — | Student walkthrough — 9 screenshot scenes (Tier G3) |
 | `/guide/creating` | `guide/CreatingShowcase` | — | Teacher walkthrough — 10 screenshot scenes (Tier G4) |
 | `/dashboard` | `Dashboard` | `ProtectedRoute` | Creator's lessons |
@@ -93,7 +93,7 @@ Defined in `App.tsx` with three guard components. `BrowserRouter` + `QueryClient
 | `/status` | `Status` | — | System status (v2: AI health + recent errors cards, bilingual) |
 | `*` | `NotFound` | — | 404 |
 
-Routes under `/login … /settings` render inside `AppLayout` (shared nav chrome). The three guards:
+Routes under `/` and `/login … /settings` render inside `AppLayout` (shared nav chrome — TopNav's first item is "หน้าแรก" → `/`). The three guards:
 
 - **`ProtectedRoute`** — hard gate; redirects unauthenticated users to `/login` with `state.from` for redirect-back (Tier 2.B).
 - **`RequireLogin`** — soft gate; renders an inline "please sign in" prompt (with `title`/`description` props) instead of redirecting. The login link carries `state.from`.
@@ -229,7 +229,8 @@ In production these are set in the Vercel dashboard, with `VITE_API_URL` pointin
 - **Screenshots are generated, never hand-captured:** `node scripts/seed-guide-demo.mjs` then `node scripts/capture-guide.mjs` (Playwright → WebP into `public/guide/` + regenerates `src/pages/guide/guideImages.ts`). Rerun after UI changes; `--scene <id>` recaptures one. AI-marked scenes cost real Gemini tokens.
   - The seed creates demo accounts (`guide.teacher`/`guide.student@hotpotato.local`) + **three teacher lessons**: the link-only demo lesson (every question type — learning shots), a private *scratch* lesson (the editing scenes reset it to its baseline between shots via `resetScratch`), and an untitled *blank* lesson (the empty-doc AI-CTA shot) + 4 vault images. Lesson docs live in `scripts/guide-demo-docs.mjs` (shared by both scripts); ids in `scripts/guide-demo.json`. **Rerun against production at launch** (ids differ per DB).
 - **Bundle rule:** guide images are static files under `public/guide/` referenced by URL — never `import` them; both showcase pages stay lazy routes (guarded by tests in `pages/__tests__/`). Entry chunk unchanged at 138 kB gzip; `CreatingShowcase` is its own ~5.5 kB gzip lazy chunk.
-- `lib/brand.ts` `BRAND_NAME` is the working product name (owner hasn't picked a final brand) — new user-facing copy should use it instead of hardcoding a name.
+- `lib/brand.ts` `BRAND_NAME` = **"Hot Potato"** (owner decision 2026-07-11) — all user-facing copy must use it, never a hardcoded name. Last remnant: the logo art (`src/assets/logo.png`) still reads "Intuita"; asset swap is an owner task.
+- **Landing + hub merge rider (2026-07-11):** `learning-01-landing.webp` still shows the pre-merge landing — recapture scene 1 (`scripts/capture-guide.mjs --scene`) when convenient.
 
 ## Gotchas
 

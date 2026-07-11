@@ -49,15 +49,28 @@ describe("lazy routes", () => {
   it("renders Landing eagerly on / without Suspense round-trip", () => {
     window.history.pushState({}, "", "/");
     const el = renderApp();
-    expect(el.textContent).toContain("Manga-style lessons");
+    expect(el.textContent).toContain("ฉันเป็นนักเรียน");
   });
 
-  it("resolves a lazy route through Suspense", async () => {
+  it("redirects /guide to the merged landing", async () => {
     window.history.pushState({}, "", "/guide");
     const el = renderApp();
     await vi.waitFor(() => {
-      expect(el.textContent).toContain("คู่มือการใช้งาน");
+      expect(el.textContent).toContain("ฉันเป็นนักเรียน");
+      expect(window.location.pathname).toBe("/");
     });
+  });
+
+  it("resolves a lazy route through Suspense", async () => {
+    window.history.pushState({}, "", "/guide/learning");
+    const el = renderApp();
+    // First transform of the showcase chunk can exceed waitFor's 1s default.
+    await vi.waitFor(
+      () => {
+        expect(el.textContent).toContain("เริ่มได้เลย ไม่ต้องสมัคร");
+      },
+      { timeout: 5000 },
+    );
   });
 
   it("guide showcase pages are lazy routes (bundle budget guard)", () => {

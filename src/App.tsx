@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { lazy, Suspense, useEffect, useRef } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./stores/auth.store";
 
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -21,7 +21,6 @@ const CloudinaryUpload = lazy(() => import("./pages/Cloudinaryupload"));
 const Explore = lazy(() => import("./pages/Explore"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Settings = lazy(() => import("./pages/Setting"));
-const Guide = lazy(() => import("./pages/Guide"));
 const LearningShowcase = lazy(() => import("./pages/guide/LearningShowcase"));
 const CreatingShowcase = lazy(() => import("./pages/guide/CreatingShowcase"));
 const History = lazy(() => import("./pages/History"));
@@ -48,8 +47,6 @@ const App = () => {
       <BrowserRouter>
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            <Route path="/" element={<Landing />} />
-
             <Route path="/status" element={<Status />} />
 
             <Route
@@ -83,6 +80,8 @@ const App = () => {
             <Route path="/view/:id" element={<TiptapView />} />
 
             <Route element={<AppLayout />}>
+              {/* Landing + guide hub merged (2026-07-11); stays an eager import. */}
+              <Route path="/" element={<Landing />} />
               <Route
                 path="/login"
                 element={
@@ -92,7 +91,8 @@ const App = () => {
                 }
               />
               <Route path="/explore" element={<Explore />} />
-              <Route path="/guide" element={<Guide />} />
+              {/* The old hub — its role cards now live on Landing. */}
+              <Route path="/guide" element={<Navigate to="/" replace />} />
               <Route path="/guide/learning" element={<LearningShowcase />} />
               <Route path="/guide/creating" element={<CreatingShowcase />} />
               <Route

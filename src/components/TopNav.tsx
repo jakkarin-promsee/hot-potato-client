@@ -3,8 +3,8 @@ import {
   PenSquare,
   User,
   History,
+  Home,
   Menu,
-  BookOpen,
   Settings,
 } from "lucide-react";
 import { NavLink } from "./NavLink";
@@ -20,10 +20,18 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { useAuthStore } from "@/stores/auth.store";
 import { useAppI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import {
+  isGuideShowcasePath,
+  useRevealOnScrollUp,
+  useRevealOnScrollUpListener,
+} from "@/hooks/useRevealOnScrollUp";
+import { BRAND_NAME } from "@/lib/brand";
 import logo from "@/assets/logo.png";
 
 const publicNavItems = [
-  { to: "/guide", icon: BookOpen, labelEn: "Guide", labelTh: "คู่มือ" },
+  // "/" is landing + guide hub in one (2026-07-11) — the nav item is Home.
+  { to: "/", icon: Home, labelEn: "Home", labelTh: "หน้าแรก" },
   { to: "/explore", icon: Compass, labelEn: "Explore", labelTh: "สำรวจ" },
   { to: "/settings", icon: Settings, labelEn: "Settings", labelTh: "ตั้งค่า" },
 ];
@@ -39,6 +47,9 @@ export function TopNav() {
   const { pathname } = useLocation();
   const token = useAuthStore((s) => s.token);
   const { t } = useAppI18n();
+  const guideShowcase = isGuideShowcasePath(pathname);
+  useRevealOnScrollUpListener(guideShowcase);
+  const navRevealed = useRevealOnScrollUp(guideShowcase);
   const showLoginLink = !token && pathname !== "/login";
   const navItems = token
     ? [
@@ -49,12 +60,17 @@ export function TopNav() {
     : publicNavItems;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+    <header
+      className={cn(
+        "sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl transition-transform duration-200",
+        guideShowcase && !navRevealed && "-translate-y-full",
+      )}
+    >
       <div className="container flex h-(--app-nav-height) items-center justify-between px-4">
         <Link to="/" className="shrink-0">
           <img
             src={logo}
-            alt="Intuita"
+            alt={BRAND_NAME}
             className="h-8 w-8 object-contain"
           />
         </Link>
