@@ -17,6 +17,7 @@ import {
   rememberPastedImageUrl,
 } from "@/lib/clipboardPasteImageCache";
 import { createEditorExtensions } from "./config/editorExtensions";
+import AiDraftLauncher from "./ai/AiDraftLauncher";
 import { useEditorI18n } from "./editor.i18n";
 
 const ZOOM_MIN = 0.5;
@@ -342,6 +343,8 @@ const TipTapEditor = () => {
               className="tiptap-editor tiptap-editor--editor mx-auto pt-16 pb-40"
               style={{ width: "400px" }}
             >
+              {/* Empty-lesson AI CTA (renders only while the doc is empty) */}
+              <AiDraftLauncher editor={editor} variant="cta" />
               <EditorContent editor={editor} />
             </div>
           </div>
