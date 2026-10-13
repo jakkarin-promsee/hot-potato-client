@@ -13,7 +13,7 @@
 [![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose_9-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com)
 [![Google Gemini](https://img.shields.io/badge/AI-Google_Gemini-4285F4?logo=google&logoColor=white)](https://ai.google.dev)
 
-[**Live Demo**](https://hot-potato-client.vercel.app) · [**Live API**](https://hot-potato-server.onrender.com) · [**Server Repository**](https://github.com/Jakkarin-Promsee/hot-potato-server)
+[**Showcase**](https://hot-potato-client.vercel.app/) · [**Server Repository**](https://github.com/Jakkarin-Promsee/hot-potato-server) · [**Workspace Repository**](https://github.com/jakkarin-promsee/hop-potato-root)
 
 </div>
 
@@ -23,33 +23,111 @@
 
 Hot Potato is a full-stack learning platform designed for students who are far from good schools and reliable internet. Teachers — including non-technical ones — author rich lessons with embedded critical-thinking questions. Students read the lessons, answer the questions, and can freely ask an AI tutor (Google Gemini) anything about the content. The AI responds with warm, coaching-style feedback in Thai by default, rather than plain grading.
 
-The project is split across two repositories. **This repository contains the web client and serves as the project's main documentation** — everything you need to understand and run the whole platform starts here.
+The deployable product is split across two repositories. **This repository contains the web client**; the separate workspace repository holds the cross-cutting architecture documentation.
+
+> **Implementing a feature? Keep the [root workspace repository](https://github.com/jakkarin-promsee/hop-potato-root) alongside this repo.** Its [developer guidebook](https://github.com/jakkarin-promsee/hop-potato-root#developer-guidebook) explains how client and server fit together, and its `graphify-out/` knowledge graph connects UI, API, model, and tutor concepts across both codebases. Check that graph and the current source on both sides before changing an endpoint, lesson block, auth flow, or AI behavior.
 
 | Repository | Role | Stack | Hosted on |
 | --- | --- | --- | --- |
-| **hot-potato-client** (this repo) | Web app — teacher editor + student viewer + AI chat surfaces | React 19, TypeScript, Vite 7, Tailwind CSS v4 | [Vercel](https://hot-potato-client.vercel.app) |
-| [**hot-potato-server**](https://github.com/Jakkarin-Promsee/hot-potato-server) | REST API — auth, lesson storage, student progress, the entire AI layer | Express 5, TypeScript, MongoDB (Mongoose 9), Google Gemini | [Render](https://hot-potato-server.onrender.com) |
+| **hot-potato-client** (this repo) | Web app — teacher editor + student viewer + AI chat surfaces | React 19, TypeScript, Vite 7, Tailwind CSS v4 | Vercel configuration |
+| [**hot-potato-server**](https://github.com/Jakkarin-Promsee/hot-potato-server) | REST API — auth, lesson storage, student progress, the entire AI layer | Express 5, TypeScript, MongoDB (Mongoose 9), Google Gemini | Render configuration |
 
 Two product principles shape the entire codebase:
 
 1. **AI access is never rationed for real students** — there are no per-student quotas. Rate limiting exists only to stop bots, with generous, environment-tunable thresholds.
 2. **Anonymous users keep full access** — reading lessons and using the AI tutor never requires an account. Logging in only adds persistence (answer history, chat history, tutor memory).
 
-## Screenshots
+## Use cases
 
-| Lesson viewer | Lesson editor |
+The interface is Thai-first and can switch to English. These screenshots show a seeded guide lesson and demo accounts, captured with Playwright at **2× resolution**. The landing screenshots were refreshed from the current running client with [`scripts/capture-readme-landing.mjs`](scripts/capture-readme-landing.mjs); the lesson and editor scenes come from [`scripts/capture-guide.mjs`](scripts/capture-guide.mjs). Those older guide scenes should be recaptured after further UI changes. The in-app walkthroughs are at `/guide/learning` and `/guide/creating` when the client is running.
+
+<img src="docs/readme-landing.webp" alt="Current landing page with paths for students and teachers" width="800">
+
+### Student: explore and read without signing in
+
+1. Open `/` and choose **Start exploring**, or go straight to `/explore`.
+2. Search by lesson title; switch between **All**, **Bookmarked**, and **Recent**. Bookmarks are stored on your device.
+3. Open a public lesson card. The viewer keeps the teacher's text, media, and embedded questions in reading order.
+
+| Explore lessons | Read a lesson |
 | --- | --- |
-| ![Lesson viewer](public/guide/learning-03-viewer.webp) | ![Lesson editor](public/guide/creating-03-editor-overview.webp) |
+| <img src="public/guide/learning-02-explore.webp" alt="Explore with search and a bookmarked lesson" width="340"> | <img src="public/guide/learning-03-viewer.webp" alt="Lesson viewer on a phone" width="340"> |
 
-| AI tutor feedback | Ask-AI free chat |
+### Student: answer questions and discuss the feedback
+
+The lesson can contain multiple-choice, written-answer, drag-to-fill, and typed-fill questions. Submit your answer to get feedback; a written response is evaluated for reasoning. Follow-up suggestions and the question's conversation thread let you continue thinking through the same topic.
+
+| Choose an answer | Write an answer | Fill a blank |
+| --- | --- | --- |
+| <img src="public/guide/learning-04a-choice.webp" alt="Multiple-choice question" width="360"> | <img src="public/guide/learning-04b-write.webp" alt="Written-answer question" width="360"> | <img src="public/guide/learning-04c-blankdrag.webp" alt="Drag-to-fill question" width="360"> |
+
+<img src="public/guide/learning-05-feedback.webp" alt="AI feedback with suggested follow-up questions" width="360">
+
+### Student: ask the tutor freely
+
+Tap **Ask AI** in a lesson and ask a question in your own words. Replies stream into a chat grounded in the lesson, with suggested next questions. This also works anonymously; signing in adds server-side conversation history.
+
+| Ask about the lesson | Choose a coaching style |
 | --- | --- |
-| ![AI feedback on an answer](public/guide/learning-05-feedback.webp) | ![Ask AI modal](public/guide/learning-06-askai.webp) |
+| <img src="public/guide/learning-06-askai.webp" alt="Ask AI conversation" width="340"> | <img src="public/guide/learning-07-personality.webp" alt="Tutor personality selector" width="340"> |
 
-| Teacher AI copilot hub | Publish settings |
-| --- | --- |
-| ![AI tools hub in the editor](public/guide/creating-08a-ai-hub.webp) | ![Publish modal](public/guide/creating-09b-publish-modal.webp) |
+### Student: return to learning and set preferences
 
-More walkthrough scenes live on the site itself: [student walkthrough](https://hot-potato-client.vercel.app/guide/learning) · [teacher walkthrough](https://hot-potato-client.vercel.app/guide/creating). All screenshots are generated automatically with Playwright (`scripts/capture-guide.mjs`) against seeded demo data — never hand-captured.
+With an account, visit **History** to reopen lessons and **Profile** to view or erase tutor memory. Automatic memory updates are currently **off by default** on the server; the memory screen can still display existing data. **Settings** offers language, theme, and font-size controls.
+
+| Learning history | Tutor memory | Settings |
+| --- | --- | --- |
+| <img src="public/guide/learning-08a-history.webp" alt="Recently opened lessons" width="340"> | <img src="public/guide/learning-08b-memory.webp" alt="Tutor memory card" width="340"> | <img src="public/guide/learning-09-settings.webp" alt="Language and appearance settings" width="340"> |
+
+### Teacher: create and write a lesson
+
+1. Sign in, open **Create**, and start a lesson.
+2. Write on the desktop editor canvas. Use the left rail for text, media, formulas, and questions; review the document and formatting controls alongside it.
+3. Add images or drawings and build a math expression visually when the lesson needs them.
+
+**Start a lesson:**
+
+<img src="public/guide/creating-01-create-page.webp" alt="Teacher Create page" width="760">
+
+**Open the blank editor, then write and format content:**
+
+<img src="public/guide/creating-02-blank-editor.webp" alt="Blank lesson editor" width="760">
+
+<img src="public/guide/creating-03-editor-overview.webp" alt="Lesson editor with content" width="760">
+
+<img src="public/guide/creating-04-writing.webp" alt="Text editing controls" width="760">
+
+**Add media and formulas:**
+
+<img src="public/guide/creating-05a-media.webp" alt="Image and media controls" width="760">
+
+<img src="public/guide/creating-06-formula.webp" alt="Math formula builder" width="360">
+
+### Teacher: add questions and use the AI copilot
+
+Add a question block from the editor rail and set its prompt, options, and guidance. The **AI** rail offers a workflow for outlining, drafting, improving text, generating questions, and reviewing the lesson. Generated material is previewed; it enters the document only when the teacher accepts it.
+
+**Build a question:**
+
+<img src="public/guide/creating-07a-question-panel.webp" alt="Question blocks in the editor" width="760">
+
+<img src="public/guide/creating-07b-question-creator.webp" alt="Question creator form" width="360">
+
+**Ask AI for a draft, then review its proposal:**
+
+<img src="public/guide/creating-08a-ai-hub.webp" alt="AI tools grouped by writing step" width="760">
+
+<img src="public/guide/creating-08b-draft-preview.webp" alt="AI outline awaiting approval" width="760">
+
+<img src="public/guide/creating-09a-critic.webp" alt="AI lesson review" width="760">
+
+### Teacher: publish and share
+
+Review the lesson, choose **public**, **link-only**, or **private**, and configure the tutor's per-lesson guidance. After publishing, copy or share the lesson link. A teacher can also add collaborators to help maintain a lesson.
+
+<img src="public/guide/creating-09b-publish-modal.webp" alt="Publish dialog and tutor settings" width="760">
+
+<img src="public/guide/creating-10-share.webp" alt="Share controls after publishing" width="760">
 
 ## Features
 
@@ -59,7 +137,7 @@ More walkthrough scenes live on the site itself: [student walkthrough](https://h
 - **Five embedded question types** — multiple choice, open-ended writing (AI-evaluated), fill-in-the-blank (choice and typed), and an embedded free-form AI tutor block.
 - **Streaming AI tutor** — answers stream token-by-token over SSE, render as safe markdown, and end with up to three tappable follow-up suggestion chips. Every question card supports a follow-up conversation thread.
 - **Six tutor personalities** — students pick the coaching style they like; the choice persists and is attached to every AI call.
-- **Tutor memory** — for logged-in students the tutor builds a lightweight sketch of interests, strengths, and growth areas over time, viewable and erasable from the profile page.
+- **Tutor memory controls** — logged-in students can view and erase their sketch from the profile page. Automatic sketch updates and injection are disabled by default on the server; operators can enable them with `AI_MEMORY_ENABLED=true`.
 - **No login wall** — anonymous visitors can read every public lesson and use the AI tutor in full; conversation context is kept client-side and sent per request.
 - **Answer persistence and history** — answers autosave per block; recently opened lessons appear in the history page.
 
@@ -228,7 +306,7 @@ npm run dev      # → http://localhost:5173
 
 ### 3. Try it
 
-Open `http://localhost:5173`, register an account (or stay anonymous), create a lesson from the dashboard, and open it in the viewer — the AI tutor works immediately once the server's `GEMINI_API_KEY` is set.
+Open `http://localhost:5173`. Stay anonymous to explore a public lesson and use its AI tutor. To create a lesson, register or sign in, then open **Create**. The tutor needs the server's `GEMINI_API_KEY`.
 
 ## Available scripts
 
