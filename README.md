@@ -352,3 +352,7 @@ npm test         # in either repository
 
 - GitHub: [@Jakkarin-Promsee](https://github.com/Jakkarin-Promsee)
 - Email: jakkarin.promsee@gmail.com
+
+## License
+
+Original code and documentation authored by Jakkarin Promsee are licensed under the [MIT License](LICENSE). Third-party code, assets, datasets, and other materials are not covered by this license; their original terms apply.
